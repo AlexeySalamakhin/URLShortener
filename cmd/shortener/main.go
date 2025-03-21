@@ -22,30 +22,41 @@ func main() {
 	}
 }
 
+func PostURLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	originalURL, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
+	}
+	if len(originalURL) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	shortKey := getShortURL()
+
+	db[shortKey] = string(originalURL)
+	w.WriteHeader(201)
+	w.Write(fmt.Appendf(nil, "http://localhost:8080/%s", shortKey))
+
+}
 func HandleShorten(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		w.Header().Set("Content-Type", "text/plain")
-		originalURL, err := io.ReadAll(r.Body)
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			return
-		}
-		shortKey := getShortURL()
-
-		db[shortKey] = string(originalURL)
-		w.WriteHeader(201)
-		w.Write([]byte(fmt.Sprintf("http://localhost:8080/%s", shortKey)))
+		PostURLHandler(w, r)
 	} else if r.Method == http.MethodGet {
-		id := r.URL.Path[1:]
-		originalURL, found := db[id]
-		if !found {
-			http.Error(w, "Not found", http.StatusBadRequest)
-		}
-		http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
+		GetURLHandler(r, w, db)
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
 	}
+}
 
-	w.WriteHeader(http.StatusBadRequest)
-
+func GetURLHandler(r *http.Request, w http.ResponseWriter, urlMapping map[string]string) {
+	id := r.URL.Path[1:]
+	originalURL, found := urlMapping[id]
+	if !found {
+		http.Error(w, "Not found", http.StatusBadRequest)
+	}
+	http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
 }
 
 func getShortURL() string {
