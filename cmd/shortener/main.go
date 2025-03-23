@@ -3,14 +3,16 @@ package main
 import (
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
+
+	"github.com/AlexeySalamakhin/URLShortener/internal/store"
+	"github.com/AlexeySalamakhin/URLShortener/internal/utils"
 )
 
 const serverURL = `localhost:8080`
 
 var (
-	db = make(map[string]string)
+	db = store.NewInMemoryStore()
 )
 
 func main() {
@@ -22,7 +24,17 @@ func main() {
 	}
 }
 
-func PostURLHandler(w http.ResponseWriter, r *http.Request) {
+func HandleShorten(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		PostURLHandler(w, r, db)
+	} else if r.Method == http.MethodGet {
+		GetURLHandler(r, w, db)
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
+func PostURLHandler(w http.ResponseWriter, r *http.Request, store store.URLStore) {
 	w.Header().Set("Content-Type", "text/plain")
 	originalURL, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -33,39 +45,18 @@ func PostURLHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortKey := getShortURL()
-
-	db[shortKey] = string(originalURL)
+	shortKey := utils.GenerateShortUrl()
+	store.Save(string(originalURL), shortKey)
 	w.WriteHeader(201)
-	w.Write(fmt.Appendf(nil, "http://localhost:8080/%s", shortKey))
+	w.Write(fmt.Appendf(nil, "%s/%s", serverURL, shortKey))
 
 }
-func HandleShorten(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		PostURLHandler(w, r)
-	} else if r.Method == http.MethodGet {
-		GetURLHandler(r, w, db)
-	} else {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-}
 
-func GetURLHandler(r *http.Request, w http.ResponseWriter, urlMapping map[string]string) {
-	id := r.URL.Path[1:]
-	originalURL, found := urlMapping[id]
+func GetURLHandler(r *http.Request, w http.ResponseWriter, store store.URLStore) {
+	shortUrl := r.URL.Path[1:]
+	found, originalURL := store.Get(shortUrl)
 	if !found {
 		http.Error(w, "Not found", http.StatusBadRequest)
 	}
 	http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
-}
-
-func getShortURL() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	const keyLength = 6
-
-	shortKey := make([]byte, keyLength)
-	for i := range shortKey {
-		shortKey[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(shortKey)
 }
