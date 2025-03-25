@@ -19,6 +19,6 @@ func (u *URLShortener) Shorten(originalURL string) string {
 	return shortKey
 }
 
-func (u *URLShortener) RedirectUrl(shortURL string) (bool, string) {
+func (u *URLShortener) GetOriginalUrl(shortURL string) (bool, string) {
 	return u.store.Get(shortURL)
 }

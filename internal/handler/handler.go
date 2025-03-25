@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/service"
+	"github.com/go-chi/chi"
 )
 
 type URLHandler struct {
@@ -15,15 +16,14 @@ type URLHandler struct {
 func NewURLHandler(shortener *service.URLShortener) *URLHandler {
 	return &URLHandler{Shortener: shortener}
 }
-
-func (h *URLHandler) HandleShorten(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		h.PostURLHandler(w, r)
-	} else if r.Method == http.MethodGet {
-		h.GetURLHandler(r, w)
-	} else {
+func (h *URLHandler) SetupRouter() *chi.Mux {
+	rout := chi.NewRouter()
+	rout.Post("/", h.PostURLHandler)
+	rout.Get("/{shortURL}", h.GetURLHandler)
+	rout.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-	}
+	})
+	return rout
 }
 
 func (h *URLHandler) PostURLHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,9 +42,9 @@ func (h *URLHandler) PostURLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(fmt.Appendf(nil, "%s/%s", r.Host, shortKey))
 }
 
-func (h *URLHandler) GetURLHandler(r *http.Request, w http.ResponseWriter) {
-	shortUrl := r.URL.Path[1:]
-	found, originalURL := h.Shortener.RedirectUrl(shortUrl)
+func (h *URLHandler) GetURLHandler(w http.ResponseWriter, r *http.Request) {
+	shortURL := r.URL.Path[1:]
+	found, originalURL := h.Shortener.GetOriginalUrl(shortURL)
 	if !found {
 		w.WriteHeader(http.StatusBadRequest)
 		return

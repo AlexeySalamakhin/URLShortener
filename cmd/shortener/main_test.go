@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -38,6 +39,36 @@ func TestPostURLHandler(t *testing.T) {
 			require.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
 			respBody, _ := io.ReadAll(r.Body)
 			require.Containsf(t, tc.expectedBody, string(respBody), "Тело ответа не содержит ссылку")
+		})
+	}
+}
+
+func TestGetURLHandler(t *testing.T) {
+	testCases := []struct {
+		method       string
+		expectedCode int
+		URL          string
+	}{
+		{
+			method:       http.MethodGet,
+			expectedCode: http.StatusTemporaryRedirect,
+			URL:          "https://practicum.yandex.ru",
+		},
+	}
+
+	shortener := service.NewURLShortener(store.NewInMemoryStore())
+	handler := handler.NewURLHandler(shortener)
+	for _, tc := range testCases {
+		t.Run(tc.method, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.URL))
+			w := httptest.NewRecorder()
+			handler.PostURLHandler(w, r)
+			shortUrlByte, _ := io.ReadAll(w.Body)
+			shortUrl, _ := url.Parse("http://" + string(shortUrlByte))
+			r = httptest.NewRequest(tc.method, shortUrl.Path, nil)
+			w = httptest.NewRecorder()
+			handler.GetURLHandler(w, r)
+			require.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
 		})
 	}
 }

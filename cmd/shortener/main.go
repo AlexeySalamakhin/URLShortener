@@ -9,12 +9,11 @@ import (
 )
 
 func main() {
-	mux := http.NewServeMux()
 	db := store.NewInMemoryStore()
 	urlShortener := service.NewURLShortener(db)
 	urlHandler := handler.NewURLHandler(urlShortener)
-	mux.HandleFunc(`/`, urlHandler.HandleShorten)
-	err := http.ListenAndServe("localhost:8080", mux)
+	r := urlHandler.SetupRouter()
+	err := http.ListenAndServe("localhost:8080", r)
 	if err != nil {
 		panic(err)
 	}
