@@ -11,11 +11,11 @@ import (
 
 type URLHandler struct {
 	Shortener *service.URLShortener
-	BaseUrl   string
+	BaseURL   string
 }
 
-func NewURLHandler(shortener *service.URLShortener, baseUrl string) *URLHandler {
-	return &URLHandler{Shortener: shortener, BaseUrl: baseUrl}
+func NewURLHandler(shortener *service.URLShortener, baseURL string) *URLHandler {
+	return &URLHandler{Shortener: shortener, BaseURL: baseURL}
 }
 func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout := chi.NewRouter()
@@ -40,7 +40,7 @@ func (h *URLHandler) PostURLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	shortKey := h.Shortener.Shorten(string(originalURL))
 	w.WriteHeader(201)
-	w.Write(fmt.Appendf(nil, "%s/%s", h.BaseUrl, shortKey))
+	w.Write(fmt.Appendf(nil, "%s/%s", h.BaseURL, shortKey))
 }
 
 func (h *URLHandler) GetURLHandler(w http.ResponseWriter, r *http.Request) {

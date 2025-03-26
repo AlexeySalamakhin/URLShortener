@@ -14,7 +14,7 @@ func NewURLShortener(store store.URLStore) *URLShortener {
 }
 
 func (u *URLShortener) Shorten(originalURL string) string {
-	shortKey := utils.GenerateShortUrl()
+	shortKey := utils.GenerateShortURL()
 	u.store.Save(originalURL, shortKey)
 	return shortKey
 }

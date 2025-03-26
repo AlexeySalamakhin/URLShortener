@@ -1,6 +1,6 @@
 package store
 
 type URLStore interface {
-	Save(originalUrl string, shortUrl string)
-	Get(shortUrl string) (found bool, originalURL string)
+	Save(originalURL string, shortURL string)
+	Get(shortURL string) (found bool, originalURL string)
 }

@@ -2,7 +2,7 @@ package utils
 
 import "math/rand"
 
-func GenerateShortUrl() string {
+func GenerateShortURL() string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const keyLength = 6
 

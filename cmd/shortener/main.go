@@ -14,7 +14,7 @@ func main() {
 	config.ParseFlags()
 	db := store.NewInMemoryStore()
 	urlShortener := service.NewURLShortener(db)
-	urlHandler := handler.NewURLHandler(urlShortener, config.BaseUrl)
+	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL)
 	r := urlHandler.SetupRouter()
 	err := http.ListenAndServe(config.ServerAddr, r)
 	if err != nil {
