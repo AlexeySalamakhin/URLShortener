@@ -16,7 +16,7 @@ func NewConfigs() *Config {
 
 func (c *Config) ParseFlags() {
 	flag.StringVar(&c.ServerAddr, "a", ":8080", "Server address")
-	flag.StringVar(&c.BaseURL, "b", "http://localhost:8001", "Base URL")
+	flag.StringVar(&c.BaseURL, "b", ":8080", "Base URL")
 	flag.Parse()
 
 	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {

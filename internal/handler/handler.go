@@ -45,7 +45,7 @@ func (h *URLHandler) PostURLHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *URLHandler) GetURLHandler(w http.ResponseWriter, r *http.Request) {
 	shortURL := r.URL.Path[1:]
-	found, originalURL := h.Shortener.GetOriginalUrl(shortURL)
+	found, originalURL := h.Shortener.GetOriginalURL(shortURL)
 	if !found {
 		w.WriteHeader(http.StatusBadRequest)
 		return
