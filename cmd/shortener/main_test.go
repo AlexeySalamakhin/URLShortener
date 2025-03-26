@@ -30,7 +30,7 @@ func TestPostURLHandler(t *testing.T) {
 		{method: http.MethodPost, expectedCode: http.StatusBadRequest, expectedBody: "", body: ""},
 	}
 	shortener := service.NewURLShortener(store.NewInMemoryStore())
-	handler := handler.NewURLHandler(shortener)
+	handler := handler.NewURLHandler(shortener, "localhost:8080")
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			r := httptest.NewRequest(tc.method, "/", strings.NewReader(tc.body))
@@ -57,7 +57,7 @@ func TestGetURLHandler(t *testing.T) {
 	}
 
 	shortener := service.NewURLShortener(store.NewInMemoryStore())
-	handler := handler.NewURLHandler(shortener)
+	handler := handler.NewURLHandler(shortener, "localhost:8080")
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.URL))
