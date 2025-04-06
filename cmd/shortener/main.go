@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/AlexeySalamakhin/URLShortener/cmd/shortener/config"
+	"github.com/AlexeySalamakhin/URLShortener/internal/config"
 	"github.com/AlexeySalamakhin/URLShortener/internal/handler"
 	"github.com/AlexeySalamakhin/URLShortener/internal/service"
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
@@ -11,7 +11,6 @@ import (
 
 func main() {
 	config := config.NewConfigs()
-	config.ParseFlags()
 	db := store.NewInMemoryStore()
 	urlShortener := service.NewURLShortener(db)
 	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL)
