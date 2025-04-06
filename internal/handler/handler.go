@@ -5,16 +5,20 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/AlexeySalamakhin/URLShortener/internal/service"
 	"github.com/go-chi/chi"
 )
 
+type URLShortener interface {
+	Shorten(originalURL string) string
+	GetOriginalURL(shortURL string) (found bool, originalURL string)
+}
+
 type URLHandler struct {
-	Shortener *service.URLShortener
+	Shortener URLShortener
 	BaseURL   string
 }
 
-func NewURLHandler(shortener *service.URLShortener, baseURL string) *URLHandler {
+func NewURLHandler(shortener URLShortener, baseURL string) *URLHandler {
 	return &URLHandler{Shortener: shortener, BaseURL: baseURL}
 }
 func (h *URLHandler) SetupRouter() *chi.Mux {

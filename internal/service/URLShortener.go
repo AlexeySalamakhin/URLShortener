@@ -1,15 +1,18 @@
 package service
 
 import (
-	"github.com/AlexeySalamakhin/URLShortener/internal/store"
 	"github.com/AlexeySalamakhin/URLShortener/internal/utils"
 )
 
+type Store interface {
+	Save(originalURL string, shortURL string)
+	Get(shortURL string) (found bool, originalURL string)
+}
 type URLShortener struct {
-	store store.URLStore
+	store Store
 }
 
-func NewURLShortener(store store.URLStore) *URLShortener {
+func NewURLShortener(store Store) *URLShortener {
 	return &URLShortener{store: store}
 }
 
