@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	Logger "github.com/AlexeySalamakhin/URLShortener/internal/logger"
+	logger "github.com/AlexeySalamakhin/URLShortener/internal/logger"
 	"github.com/go-chi/chi"
 )
 
@@ -24,7 +24,7 @@ func NewURLHandler(shortener URLShortener, baseURL string) *URLHandler {
 }
 func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout := chi.NewRouter()
-	rout.Use(Logger.RequestLogger)
+	rout.Use(logger.RequestLogger)
 	rout.Post("/", h.PostURLHandler)
 	rout.Get("/{shortURL}", h.GetURLHandler)
 	rout.NotFound(func(w http.ResponseWriter, r *http.Request) {

@@ -5,14 +5,14 @@ import (
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/config"
 	"github.com/AlexeySalamakhin/URLShortener/internal/handler"
-	Logger "github.com/AlexeySalamakhin/URLShortener/internal/logger"
+	logger "github.com/AlexeySalamakhin/URLShortener/internal/logger"
 	"github.com/AlexeySalamakhin/URLShortener/internal/service"
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
 )
 
 func main() {
 	config := config.NewConfigs()
-	Logger.Initialize("info")
+	logger.Initialize("info")
 	db := store.NewInMemoryStore()
 	urlShortener := service.NewURLShortener(db)
 	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL)
