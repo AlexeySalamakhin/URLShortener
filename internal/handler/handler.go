@@ -30,7 +30,7 @@ func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout := chi.NewRouter()
 	rout.Use(logger.RequestLogger)
 	rout.Post("/", h.PostURLHandlerText)
-	rout.Post("/api/shorten", h.PostURLHandlerJson)
+	rout.Post("/api/shorten", h.PostURLHandlerJSON)
 	rout.Get("/{shortURL}", h.GetURLHandler)
 	rout.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -54,7 +54,7 @@ func (h *URLHandler) PostURLHandlerText(w http.ResponseWriter, r *http.Request) 
 	w.Write(fmt.Appendf(nil, "%s/%s", h.BaseURL, shortKey))
 }
 
-func (h *URLHandler) PostURLHandlerJson(w http.ResponseWriter, r *http.Request) {
+func (h *URLHandler) PostURLHandlerJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)

@@ -130,7 +130,7 @@ func TestPostURLHandlerJson(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
 
-			handler.PostURLHandlerJson(rr, req)
+			handler.PostURLHandlerJSON(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 
