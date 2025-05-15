@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	logger "github.com/AlexeySalamakhin/URLShortener/internal/logger"
+	"github.com/AlexeySalamakhin/URLShortener/internal/middleware"
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
@@ -28,7 +29,8 @@ func NewURLHandler(shortener URLShortener, baseURL string) *URLHandler {
 }
 func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout := chi.NewRouter()
-	rout.Use(logger.RequestLogger)
+	rout.Use(middleware.RequestLogger)
+	rout.Use(middleware.GzipMiddleware)
 	rout.Post("/", h.PostURLHandlerText)
 	rout.Post("/api/shorten", h.PostURLHandlerJSON)
 	rout.Get("/{shortURL}", h.GetURLHandler)
