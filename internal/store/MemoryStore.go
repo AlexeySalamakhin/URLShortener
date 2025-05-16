@@ -8,8 +8,9 @@ func NewInMemoryStore() *InMemoryStore {
 	return &InMemoryStore{db: make(map[string]string)}
 }
 
-func (s *InMemoryStore) Save(originalURL string, shortURL string) {
+func (s *InMemoryStore) Save(originalURL string, shortURL string) error {
 	s.db[shortURL] = string(originalURL)
+	return nil
 }
 
 func (s *InMemoryStore) Get(shortURL string) (found bool, originalURL string) {
