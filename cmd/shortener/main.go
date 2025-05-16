@@ -13,11 +13,14 @@ import (
 func main() {
 	config := config.NewConfigs()
 	logger.Initialize("info")
-	db := store.NewInMemoryStore()
-	urlShortener := service.NewURLShortener(db)
+	store, err := store.NewFileStore(config.File)
+	if err != nil {
+		logger.Log.Fatal(err.Error())
+	}
+	urlShortener := service.NewURLShortener(store)
 	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL)
 	r := urlHandler.SetupRouter()
-	err := http.ListenAndServe(config.ServerAddr, r)
+	err = http.ListenAndServe(config.ServerAddr, r)
 	if err != nil {
 		panic(err)
 	}

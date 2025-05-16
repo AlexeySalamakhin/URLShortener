@@ -5,7 +5,7 @@ import (
 )
 
 type Store interface {
-	Save(originalURL string, shortURL string)
+	Save(originalURL string, shortURL string) error
 	Get(shortURL string) (found bool, originalURL string)
 }
 type URLShortener struct {
