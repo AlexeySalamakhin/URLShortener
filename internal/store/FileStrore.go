@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+	"sync"
 )
 
 type URLRecord struct {
@@ -14,6 +15,7 @@ type URLRecord struct {
 }
 
 type FileStore struct {
+	mu       sync.RWMutex      // Мьютекс для защиты доступа к данным
 	db       map[string]string // shortURL -> originalURL
 	file     *os.File
 	writer   *bufio.Writer
@@ -43,6 +45,8 @@ func NewFileStore(filePath string) (*FileStore, error) {
 }
 
 func (s *FileStore) Save(originalURL, shortURL string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// Генерируем новый UUID
 	s.nextUUID++
@@ -77,12 +81,17 @@ func (s *FileStore) Save(originalURL, shortURL string) error {
 }
 
 func (s *FileStore) Get(shortURL string) (found bool, originalURL string) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	originalURL, found = s.db[shortURL]
 	return
 }
 
 func (s *FileStore) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if err := s.writer.Flush(); err != nil {
 		return err
 	}
@@ -107,6 +116,5 @@ func (s *FileStore) loadFromFile() error {
 		return err
 	}
 
-	// _, err := s.file.Seek(0, 2)
 	return nil
 }
