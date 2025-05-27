@@ -9,12 +9,8 @@ import (
 type DBStore struct {
 	DBReady bool
 }
-type Store interface {
-	Save(originalURL string, shortURL string) error
-	Get(shortURL string) (found bool, originalURL string)
-}
 
-func NewDbStore(ConnectionString string) (*DBStore, error) {
+func NewDBStore(ConnectionString string) (*DBStore, error) {
 	db, err := sql.Open("pgx", ConnectionString)
 	if err != nil {
 		panic(err)
