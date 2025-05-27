@@ -17,6 +17,7 @@ import (
 type URLShortener interface {
 	Shorten(originalURL string) string
 	GetOriginalURL(shortURL string) (found bool, originalURL string)
+	StoreReady() bool
 }
 
 type URLHandler struct {
@@ -34,6 +35,7 @@ func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout.Post("/", h.PostURLHandlerText)
 	rout.Post("/api/shorten", h.PostURLHandlerJSON)
 	rout.Get("/{shortURL}", h.GetURLHandler)
+	rout.Get("/ping", h.Ping)
 	rout.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	})
@@ -99,4 +101,13 @@ func (h *URLHandler) GetURLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
+}
+
+func (h *URLHandler) Ping(w http.ResponseWriter, r *http.Request) {
+	if h.Shortener.StoreReady() {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	w.WriteHeader(http.StatusInternalServerError)
+	return
 }

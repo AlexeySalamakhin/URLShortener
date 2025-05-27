@@ -20,3 +20,7 @@ func (s *InMemoryStore) Get(shortURL string) (found bool, originalURL string) {
 	}
 	return true, originalURL
 }
+
+func (s *InMemoryStore) Ready() bool {
+	return true
+}

@@ -20,6 +20,7 @@ type FileStore struct {
 	file     *os.File
 	writer   *bufio.Writer
 	nextUUID int
+	ready    bool
 }
 
 func NewFileStore(filePath string) (*FileStore, error) {
@@ -115,6 +116,10 @@ func (s *FileStore) loadFromFile() error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-
+	s.ready = true
 	return nil
+}
+
+func (s *FileStore) Ready() bool {
+	return s.ready
 }
