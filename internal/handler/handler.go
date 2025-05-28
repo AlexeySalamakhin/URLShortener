@@ -133,6 +133,7 @@ func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Error("Failed to encode JSON request", zap.Error(err))
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(jsonResp)
 }
