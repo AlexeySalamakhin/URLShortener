@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
 
@@ -15,7 +16,6 @@ type PostgresStore struct {
 	mu       sync.RWMutex
 	db       *sql.DB
 	nextUUID int
-	ready    bool
 }
 
 func NewDBStore(connStr string) (*PostgresStore, error) {
@@ -38,7 +38,6 @@ func NewDBStore(connStr string) (*PostgresStore, error) {
 		return nil, fmt.Errorf("failed to load max UUID: %v", err)
 	}
 
-	store.ready = true
 	return store, nil
 }
 
@@ -71,6 +70,10 @@ func (s *PostgresStore) loadMaxUUID() error {
 	return nil
 }
 
+func (s *PostgresStore) Ready() bool {
+	return s.db.Ping() == nil
+}
+
 func (s *PostgresStore) Save(originalURL, shortURL string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -78,71 +81,20 @@ func (s *PostgresStore) Save(originalURL, shortURL string) error {
 	s.nextUUID++
 	uuid := strconv.Itoa(s.nextUUID)
 
-	_, err := s.db.Exec(
-		"INSERT INTO urls (uuid, short_url, original_url) VALUES ($1, $2, $3)",
-		uuid, shortURL, originalURL,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to save URL: %v", err)
-	}
-
-	return nil
-}
-
-func (s *PostgresStore) Get(shortURL string) (found bool, originalURL string) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	err := s.db.QueryRow(
-		"SELECT original_url FROM urls WHERE short_url = $1",
-		shortURL,
-	).Scan(&originalURL)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, ""
-		}
-		return false, ""
-	}
-
-	return true, originalURL
-}
-
-func (s *PostgresStore) Close() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.db != nil {
-		return s.db.Close()
-	}
-	return nil
-}
-
-func (s *PostgresStore) Ready() bool {
-	return s.ready
-}
-
-func (s *PostgresStore) SaveWithContext(ctx context.Context, originalURL, shortURL string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.nextUUID++
-	uuid := strconv.Itoa(s.nextUUID)
-
 	_, err := s.db.ExecContext(
-		ctx,
+		context.Background(),
 		"INSERT INTO urls (uuid, short_url, original_url) VALUES ($1, $2, $3)",
 		uuid, shortURL, originalURL,
 	)
 	return err
 }
 
-func (s *PostgresStore) GetWithContext(ctx context.Context, shortURL string) (found bool, originalURL string) {
+func (s *PostgresStore) Get(shortURL string) (found bool, originalURL string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	err := s.db.QueryRowContext(
-		ctx,
+		context.Background(),
 		"SELECT original_url FROM urls WHERE short_url = $1",
 		shortURL,
 	).Scan(&originalURL)
@@ -155,4 +107,27 @@ func (s *PostgresStore) GetWithContext(ctx context.Context, shortURL string) (fo
 	}
 
 	return true, originalURL
+}
+
+func (s *PostgresStore) SaveBatch(records []models.URLRecord) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	tx, err := s.db.Begin()
+	defer tx.Rollback()
+	if err != nil {
+		return err
+	}
+	for _, record := range records {
+		err = s.Save(record.OriginalURL, record.ShortURL)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }

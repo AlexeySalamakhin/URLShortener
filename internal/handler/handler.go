@@ -34,6 +34,7 @@ func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout.Use(middleware.GzipMiddleware)
 	rout.Post("/", h.PostURLHandlerText)
 	rout.Post("/api/shorten", h.PostURLHandlerJSON)
+	rout.Post("/api/shorten/batch", h.Batch)
 	rout.Get("/{shortURL}", h.GetURLHandler)
 	rout.Get("/ping", h.Ping)
 	rout.NotFound(func(w http.ResponseWriter, r *http.Request) {
@@ -109,4 +110,29 @@ func (h *URLHandler) Ping(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusInternalServerError)
+}
+
+func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
+	var req models.ShortURLBatchRequest
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&req); err != nil {
+		logger.Log.Error("Failed to decode JSON request", zap.Error(err))
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+	var resp models.ShortURLBatchResponse
+	for _, record := range req {
+		resp = append(resp, models.URLBatchResponse{
+			CorrelationID: record.CorrelationID,
+			ShortURL:      fmt.Sprintf("%s/%s", h.BaseURL, h.Shortener.Shorten(record.OriginalURL)),
+		})
+	}
+	jsonResp, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		logger.Log.Error("Failed to encode JSON request", zap.Error(err))
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	w.Write(jsonResp)
 }
