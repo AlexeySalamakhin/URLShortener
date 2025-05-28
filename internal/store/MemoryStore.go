@@ -1,5 +1,7 @@
 package store
 
+import "github.com/AlexeySalamakhin/URLShortener/internal/models"
+
 type InMemoryStore struct {
 	db map[string]string
 }
@@ -19,4 +21,17 @@ func (s *InMemoryStore) Get(shortURL string) (found bool, originalURL string) {
 		return false, ""
 	}
 	return true, originalURL
+}
+
+func (s *InMemoryStore) Ready() bool {
+	return true
+}
+
+func (s *InMemoryStore) SaveBatch(records []models.URLRecord) error {
+
+	var err error
+	for _, rerecord := range records {
+		err = s.Save(rerecord.OriginalURL, rerecord.ShortURL)
+	}
+	return err
 }

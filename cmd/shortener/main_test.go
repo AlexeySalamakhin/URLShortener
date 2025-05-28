@@ -82,6 +82,11 @@ type MockShortener struct {
 	mock.Mock
 }
 
+// StoreReady implements handler.URLShortener.
+func (m *MockShortener) StoreReady() bool {
+	return true
+}
+
 func (m *MockShortener) Shorten(url string) string {
 	args := m.Called(url)
 	return args.String(0)
