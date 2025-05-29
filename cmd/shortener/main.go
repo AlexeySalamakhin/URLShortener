@@ -13,7 +13,12 @@ import (
 func main() {
 	config := config.NewConfigs()
 	logger.Initialize("info")
-	store, err := store.NewFileStore(config.File)
+
+	store, err := store.InitStore(config)
+
+	if err != nil {
+		logger.Log.Fatal(err.Error())
+	}
 	if err != nil {
 		logger.Log.Fatal(err.Error())
 	}

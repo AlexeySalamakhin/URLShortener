@@ -6,13 +6,9 @@ import (
 	"os"
 	"strconv"
 	"sync"
-)
 
-type URLRecord struct {
-	UUID        string `json:"uuid"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
+	"github.com/AlexeySalamakhin/URLShortener/internal/models"
+)
 
 type FileStore struct {
 	mu       sync.RWMutex      // Мьютекс для защиты доступа к данным
@@ -56,7 +52,7 @@ func (s *FileStore) Save(originalURL, shortURL string) error {
 	s.db[shortURL] = originalURL
 
 	// Создаем запись для сохранения
-	record := URLRecord{
+	record := models.URLRecord{
 		UUID:        uuid,
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
@@ -80,12 +76,24 @@ func (s *FileStore) Save(originalURL, shortURL string) error {
 	return s.writer.Flush()
 }
 
-func (s *FileStore) Get(shortURL string) (found bool, originalURL string) {
+func (s *FileStore) GetOriginalURL(shortURL string) (found bool, originalURL string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	originalURL, found = s.db[shortURL]
 	return
+}
+
+func (s *FileStore) GetShortURL(originalURL string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for k, v := range s.db {
+		if v == originalURL {
+			return k
+		}
+	}
+
+	return ""
 }
 
 func (s *FileStore) Close() error {
@@ -101,7 +109,7 @@ func (s *FileStore) Close() error {
 func (s *FileStore) loadFromFile() error {
 	scanner := bufio.NewScanner(s.file)
 	for scanner.Scan() {
-		var record URLRecord
+		var record models.URLRecord
 		if err := json.Unmarshal(scanner.Bytes(), &record); err != nil {
 			return err
 		}
@@ -115,6 +123,19 @@ func (s *FileStore) loadFromFile() error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-
 	return nil
+}
+
+func (s *FileStore) Ready() bool {
+	return true
+}
+
+func (s *FileStore) SaveBatch(records []models.URLRecord) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var err error
+	for _, record := range records {
+		err = s.Save(record.OriginalURL, record.ShortURL)
+	}
+	return err
 }
