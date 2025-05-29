@@ -76,12 +76,24 @@ func (s *FileStore) Save(originalURL, shortURL string) error {
 	return s.writer.Flush()
 }
 
-func (s *FileStore) Get(shortURL string) (found bool, originalURL string) {
+func (s *FileStore) GetOriginalURL(shortURL string) (found bool, originalURL string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	originalURL, found = s.db[shortURL]
 	return
+}
+
+func (s *FileStore) GetShortURL(originalURL string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for k, v := range s.db {
+		if v == originalURL {
+			return k
+		}
+	}
+
+	return ""
 }
 
 func (s *FileStore) Close() error {

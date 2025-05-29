@@ -46,7 +46,7 @@ func (s *PostgresStore) initDB() error {
 		CREATE TABLE IF NOT EXISTS urls (
 			uuid VARCHAR(255) PRIMARY KEY,
 			short_url VARCHAR(255) UNIQUE NOT NULL,
-			original_url TEXT NOT NULL,
+			original_url TEXT UNIQUE NOT NULL,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
@@ -89,7 +89,7 @@ func (s *PostgresStore) Save(originalURL, shortURL string) error {
 	return err
 }
 
-func (s *PostgresStore) Get(shortURL string) (found bool, originalURL string) {
+func (s *PostgresStore) GetOriginalURL(shortURL string) (found bool, originalURL string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -107,6 +107,27 @@ func (s *PostgresStore) Get(shortURL string) (found bool, originalURL string) {
 	}
 
 	return true, originalURL
+}
+
+func (s *PostgresStore) GetShortURL(shortURL string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	originalURL := ""
+
+	err := s.db.QueryRowContext(
+		context.Background(),
+		"SELECT short_url FROM urls WHERE original_url = $1",
+		shortURL,
+	).Scan(&originalURL)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ""
+		}
+		return ""
+	}
+
+	return originalURL
 }
 
 func (s *PostgresStore) SaveBatch(records []models.URLRecord) error {

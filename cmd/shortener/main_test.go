@@ -87,9 +87,9 @@ func (m *MockShortener) StoreReady() bool {
 	return true
 }
 
-func (m *MockShortener) Shorten(url string) string {
+func (m *MockShortener) Shorten(url string) (string, bool) {
 	args := m.Called(url)
-	return args.String(0)
+	return args.String(0), args.Bool(1)
 }
 
 func (m *MockShortener) GetOriginalURL(url string) (bool, string) {
@@ -127,7 +127,7 @@ func TestPostURLHandlerJson(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			mockShortener := new(MockShortener)
-			mockShortener.On("Shorten", tt.input.URL).Return(tt.mockShortKey)
+			mockShortener.On("Shorten", tt.input.URL).Return(tt.mockShortKey, false)
 
 			handler := handler.NewURLHandler(mockShortener, "http://localhost:8080")
 			body, _ := json.Marshal(tt.input)

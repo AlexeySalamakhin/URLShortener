@@ -6,7 +6,8 @@ import (
 
 type Store interface {
 	Save(originalURL string, shortURL string) error
-	Get(shortURL string) (found bool, originalURL string)
+	GetOriginalURL(shortURL string) (found bool, originalURL string)
+	GetShortURL(originalURL string) string
 	Ready() bool
 }
 type URLShortener struct {
@@ -17,14 +18,18 @@ func NewURLShortener(store Store) *URLShortener {
 	return &URLShortener{store: store}
 }
 
-func (u *URLShortener) Shorten(originalURL string) string {
+func (u *URLShortener) Shorten(originalURL string) (string, bool) {
+	foundURL := u.store.GetShortURL(originalURL)
+	if foundURL != "" {
+		return foundURL, true
+	}
 	shortKey := utils.GenerateShortURL()
 	u.store.Save(originalURL, shortKey)
-	return shortKey
+	return shortKey, false
 }
 
 func (u *URLShortener) GetOriginalURL(shortURL string) (bool, string) {
-	return u.store.Get(shortURL)
+	return u.store.GetOriginalURL(shortURL)
 }
 
 func (u *URLShortener) StoreReady() bool {

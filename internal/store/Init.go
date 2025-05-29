@@ -4,8 +4,9 @@ import "github.com/AlexeySalamakhin/URLShortener/internal/config"
 
 type Store interface {
 	Save(originalURL string, shortURL string) error
-	Get(shortURL string) (found bool, originalURL string)
+	GetOriginalURL(shortURL string) (found bool, originalURL string)
 	Ready() bool
+	GetShortURL(shortURL string) string
 }
 
 func InitStore(cfg *config.Config) (Store, error) {
