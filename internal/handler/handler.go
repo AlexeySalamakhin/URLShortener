@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,8 +16,8 @@ import (
 )
 
 type URLShortener interface {
-	Shorten(originalURL string) (string, bool)
-	GetOriginalURL(shortURL string) (found bool, originalURL string)
+	Shorten(ctx context.Context, originalURL string) (string, bool)
+	GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string)
 	StoreReady() bool
 }
 
@@ -54,7 +55,7 @@ func (h *URLHandler) PostURLHandlerText(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortKey, conflict := h.Shortener.Shorten(string(originalURL))
+	shortKey, conflict := h.Shortener.Shorten(r.Context(), string(originalURL))
 
 	if conflict {
 		w.WriteHeader(http.StatusConflict)
@@ -85,7 +86,7 @@ func (h *URLHandler) PostURLHandlerJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	shortKey, conflict := h.Shortener.Shorten(req.URL)
+	shortKey, conflict := h.Shortener.Shorten(r.Context(), req.URL)
 
 	resp := models.ShortenResponse{Result: fmt.Sprintf("%s/%s", h.BaseURL, shortKey)}
 	jsonResp, err := json.Marshal(resp)
@@ -106,7 +107,7 @@ func (h *URLHandler) PostURLHandlerJSON(w http.ResponseWriter, r *http.Request) 
 
 func (h *URLHandler) GetURLHandler(w http.ResponseWriter, r *http.Request) {
 	shortURL := r.URL.Path[1:]
-	found, originalURL := h.Shortener.GetOriginalURL(shortURL)
+	found, originalURL := h.Shortener.GetOriginalURL(r.Context(), shortURL)
 	if !found {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -132,7 +133,7 @@ func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 	}
 	var resp models.ShortURLBatchResponse
 	for _, record := range req {
-		shortURL, _ := h.Shortener.Shorten(record.OriginalURL)
+		shortURL, _ := h.Shortener.Shorten(r.Context(), record.OriginalURL)
 		resp = append(resp, models.URLBatchResponse{
 			CorrelationID: record.CorrelationID,
 			ShortURL:      fmt.Sprintf("%s/%s", h.BaseURL, shortURL),

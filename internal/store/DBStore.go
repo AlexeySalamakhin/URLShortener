@@ -50,24 +50,24 @@ func (s *PostgresStore) Ready() bool {
 	return s.db.Ping() == nil
 }
 
-func (s *PostgresStore) Save(originalURL, shortURL string) error {
+func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	_, err := s.db.ExecContext(
-		context.Background(),
+		ctx,
 		"INSERT INTO urls (short_url, original_url) VALUES ($1, $2)",
 		shortURL, originalURL,
 	)
 	return err
 }
 
-func (s *PostgresStore) GetOriginalURL(shortURL string) (found bool, originalURL string) {
+func (s *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	err := s.db.QueryRowContext(
-		context.Background(),
+		ctx,
 		"SELECT original_url FROM urls WHERE short_url = $1",
 		shortURL,
 	).Scan(&originalURL)
@@ -82,13 +82,13 @@ func (s *PostgresStore) GetOriginalURL(shortURL string) (found bool, originalURL
 	return true, originalURL
 }
 
-func (s *PostgresStore) GetShortURL(originalURL string) (string, error) {
+func (s *PostgresStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	shortURL := ""
 
 	err := s.db.QueryRowContext(
-		context.Background(),
+		ctx,
 		"SELECT short_url FROM urls WHERE original_url = $1",
 		originalURL,
 	).Scan(&shortURL)

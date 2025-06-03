@@ -2,6 +2,7 @@ package store
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -40,7 +41,7 @@ func NewFileStore(filePath string) (*FileStore, error) {
 	return store, nil
 }
 
-func (s *FileStore) Save(originalURL, shortURL string) error {
+func (s *FileStore) Save(ctx context.Context, originalURL, shortURL string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -76,7 +77,7 @@ func (s *FileStore) Save(originalURL, shortURL string) error {
 	return s.writer.Flush()
 }
 
-func (s *FileStore) GetOriginalURL(shortURL string) (found bool, originalURL string) {
+func (s *FileStore) GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -84,7 +85,7 @@ func (s *FileStore) GetOriginalURL(shortURL string) (found bool, originalURL str
 	return
 }
 
-func (s *FileStore) GetShortURL(originalURL string) (string, error) {
+func (s *FileStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for k, v := range s.db {
@@ -135,7 +136,7 @@ func (s *FileStore) SaveBatch(records []models.URLRecord) error {
 	defer s.mu.Unlock()
 	var err error
 	for _, record := range records {
-		err = s.Save(record.OriginalURL, record.ShortURL)
+		err = s.Save(context.Background(), record.OriginalURL, record.ShortURL)
 	}
 	return err
 }

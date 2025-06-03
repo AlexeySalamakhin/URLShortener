@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -87,13 +88,14 @@ func (m *MockShortener) StoreReady() bool {
 	return true
 }
 
-func (m *MockShortener) Shorten(url string) (string, bool) {
-	args := m.Called(url)
+func (m *MockShortener) Shorten(ctx context.Context, url string) (string, bool) {
+	args := m.Called(ctx, url)
 	return args.String(0), args.Bool(1)
 }
 
-func (m *MockShortener) GetOriginalURL(url string) (bool, string) {
-	return true, url
+func (m *MockShortener) GetOriginalURL(ctx context.Context, url string) (bool, string) {
+	args := m.Called(ctx, url)
+	return args.Bool(0), args.String(1)
 }
 
 func (m *MockShortener) NewURLShortener() *MockShortener {
@@ -127,7 +129,7 @@ func TestPostURLHandlerJson(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			mockShortener := new(MockShortener)
-			mockShortener.On("Shorten", tt.input.URL).Return(tt.mockShortKey, false)
+			mockShortener.On("Shorten", mock.Anything, tt.input.URL).Return(tt.mockShortKey, false)
 
 			handler := handler.NewURLHandler(mockShortener, "http://localhost:8080")
 			body, _ := json.Marshal(tt.input)

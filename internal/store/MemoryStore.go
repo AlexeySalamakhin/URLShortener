@@ -1,6 +1,8 @@
 package store
 
 import (
+	"context"
+
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
@@ -12,20 +14,20 @@ func NewInMemoryStore() *InMemoryStore {
 	return &InMemoryStore{db: make(map[string]string)}
 }
 
-func (s *InMemoryStore) Save(originalURL string, shortURL string) error {
+func (s *InMemoryStore) Save(ctx context.Context, originalURL string, shortURL string) error {
 	s.db[shortURL] = string(originalURL)
 	return nil
 }
 
-func (s *InMemoryStore) GetOriginalURL(shortURL string) (found bool, originalURL string) {
+func (s *InMemoryStore) GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string) {
 	originalURL, found = s.db[shortURL]
 	if !found {
 		return false, ""
 	}
 	return true, originalURL
 }
-func (s *InMemoryStore) GetShortURL(originalURL string) (string, error) {
 
+func (s *InMemoryStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
 	for k, v := range s.db {
 		if v == originalURL {
 			return k, nil
@@ -40,10 +42,9 @@ func (s *InMemoryStore) Ready() bool {
 }
 
 func (s *InMemoryStore) SaveBatch(records []models.URLRecord) error {
-
 	var err error
-	for _, rerecord := range records {
-		err = s.Save(rerecord.OriginalURL, rerecord.ShortURL)
+	for _, record := range records {
+		err = s.Save(context.Background(), record.OriginalURL, record.ShortURL)
 	}
 	return err
 }
