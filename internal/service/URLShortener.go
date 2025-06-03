@@ -1,13 +1,16 @@
 package service
 
 import (
+	"errors"
+
+	"github.com/AlexeySalamakhin/URLShortener/internal/store"
 	"github.com/AlexeySalamakhin/URLShortener/internal/utils"
 )
 
 type Store interface {
 	Save(originalURL string, shortURL string) error
 	GetOriginalURL(shortURL string) (found bool, originalURL string)
-	GetShortURL(originalURL string) string
+	GetShortURL(originalURL string) (string, error)
 	Ready() bool
 }
 type URLShortener struct {
@@ -19,13 +22,13 @@ func NewURLShortener(store Store) *URLShortener {
 }
 
 func (u *URLShortener) Shorten(originalURL string) (string, bool) {
-	foundURL := u.store.GetShortURL(originalURL)
-	if foundURL != "" {
-		return foundURL, true
+	foundURL, err := u.store.GetShortURL(originalURL)
+	if err != nil && errors.Is(err, store.ErrShortURLNotFound) {
+		shortKey := utils.GenerateShortURL()
+		u.store.Save(originalURL, shortKey)
+		return shortKey, false
 	}
-	shortKey := utils.GenerateShortURL()
-	u.store.Save(originalURL, shortKey)
-	return shortKey, false
+	return foundURL, true
 }
 
 func (u *URLShortener) GetOriginalURL(shortURL string) (bool, string) {

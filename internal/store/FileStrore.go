@@ -84,16 +84,16 @@ func (s *FileStore) GetOriginalURL(shortURL string) (found bool, originalURL str
 	return
 }
 
-func (s *FileStore) GetShortURL(originalURL string) string {
+func (s *FileStore) GetShortURL(originalURL string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for k, v := range s.db {
 		if v == originalURL {
-			return k
+			return k, nil
 		}
 	}
 
-	return ""
+	return "", ErrShortURLNotFound
 }
 
 func (s *FileStore) Close() error {

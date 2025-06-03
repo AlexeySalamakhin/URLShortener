@@ -1,6 +1,8 @@
 package store
 
-import "github.com/AlexeySalamakhin/URLShortener/internal/models"
+import (
+	"github.com/AlexeySalamakhin/URLShortener/internal/models"
+)
 
 type InMemoryStore struct {
 	db map[string]string
@@ -22,15 +24,15 @@ func (s *InMemoryStore) GetOriginalURL(shortURL string) (found bool, originalURL
 	}
 	return true, originalURL
 }
-func (s *InMemoryStore) GetShortURL(originalURL string) string {
+func (s *InMemoryStore) GetShortURL(originalURL string) (string, error) {
 
 	for k, v := range s.db {
 		if v == originalURL {
-			return k
+			return k, nil
 		}
 	}
 
-	return ""
+	return "", ErrShortURLNotFound
 }
 
 func (s *InMemoryStore) Ready() bool {
