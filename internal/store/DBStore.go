@@ -63,9 +63,6 @@ func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL string) 
 }
 
 func (s *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	err := s.db.QueryRowContext(
 		ctx,
 		"SELECT original_url FROM urls WHERE short_url = $1",
@@ -83,8 +80,6 @@ func (s *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (fo
 }
 
 func (s *PostgresStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	shortURL := ""
 
 	err := s.db.QueryRowContext(
