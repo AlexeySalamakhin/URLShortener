@@ -33,6 +33,7 @@ func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout := chi.NewRouter()
 	rout.Use(middleware.RequestLogger)
 	rout.Use(middleware.GzipMiddleware)
+	rout.Use(middleware.CookieMiddleware)
 	rout.Post("/", h.PostURLHandlerText)
 	rout.Post("/api/shorten", h.PostURLHandlerJSON)
 	rout.Post("/api/shorten/batch", h.Batch)
