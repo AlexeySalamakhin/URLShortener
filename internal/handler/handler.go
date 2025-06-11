@@ -31,13 +31,18 @@ func NewURLHandler(shortener URLShortener, baseURL string) *URLHandler {
 }
 func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout := chi.NewRouter()
+
 	rout.Use(middleware.RequestLogger)
 	rout.Use(middleware.GzipMiddleware)
-	rout.Use(middleware.CookieMiddleware)
-	rout.Post("/", h.PostURLHandlerText)
-	rout.Post("/api/shorten", h.PostURLHandlerJSON)
-	rout.Post("/api/shorten/batch", h.Batch)
-	rout.Get("/{shortURL}", h.GetURLHandler)
+
+	rout.Group(func(r chi.Router) {
+		r.Use(middleware.CookieMiddleware)
+		r.Post("/", h.PostURLHandlerText)
+		r.Post("/api/shorten", h.PostURLHandlerJSON)
+		r.Post("/api/shorten/batch", h.Batch)
+		r.Get("/{shortURL}", h.GetURLHandler)
+	})
+
 	rout.Get("/ping", h.Ping)
 	rout.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -86,6 +91,8 @@ func (h *URLHandler) PostURLHandlerJSON(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
+	userID := r.Context().Value("user_id").(string)
+	fmt.Print(userID)
 
 	shortKey, conflict := h.Shortener.Shorten(r.Context(), req.URL)
 
@@ -132,7 +139,7 @@ func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
-	var resp models.ShortURLBatchResponse
+	var resp []models.URLBatchResponse
 	for _, record := range req {
 		shortURL, _ := h.Shortener.Shorten(r.Context(), record.OriginalURL)
 		resp = append(resp, models.URLBatchResponse{
