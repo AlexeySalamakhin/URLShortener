@@ -31,7 +31,7 @@ func TestPostURLHandlerText(t *testing.T) {
 		{
 			method:       http.MethodPost,
 			expectedCode: http.StatusCreated,
-			expectedBody: "localhost",
+			expectedBody: "localhost:8080/",
 			body:         "https://practicum.yandex.ru",
 			userID:       "test-user",
 		},
@@ -54,7 +54,12 @@ func TestPostURLHandlerText(t *testing.T) {
 			handler.PostURLHandlerText(w, r)
 			require.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
 			respBody, _ := io.ReadAll(w.Body)
-			require.Containsf(t, tc.expectedBody, string(respBody), "Тело ответа не содержит ссылку")
+			if tc.expectedCode == http.StatusCreated {
+				require.Containsf(t, string(respBody), tc.expectedBody, "Тело ответа не содержит базовый URL")
+				require.Regexpf(t, `^localhost:8080/[a-zA-Z0-9]{6}$`, string(respBody), "Тело ответа не соответствует формату короткого URL")
+			} else {
+				require.Equal(t, tc.expectedBody, string(respBody), "Тело ответа не совпадает с ожидаемым")
+			}
 		})
 	}
 }
