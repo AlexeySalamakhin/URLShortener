@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/config"
+	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
 var (
@@ -12,10 +13,11 @@ var (
 )
 
 type Store interface {
-	Save(ctx context.Context, originalURL string, shortURL string) error
+	Save(ctx context.Context, originalURL string, shortURL string, userID string) error
 	GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string)
 	Ready() bool
 	GetShortURL(ctx context.Context, shortURL string) (string, error)
+	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
 }
 
 func InitStore(cfg *config.Config) (Store, error) {

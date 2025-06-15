@@ -16,9 +16,10 @@ import (
 )
 
 type URLShortener interface {
-	Shorten(ctx context.Context, originalURL string) (string, bool)
+	Shorten(ctx context.Context, originalURL string, userID string) (string, bool)
 	GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string)
 	StoreReady() bool
+	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
 }
 
 type URLHandler struct {
@@ -31,12 +32,19 @@ func NewURLHandler(shortener URLShortener, baseURL string) *URLHandler {
 }
 func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout := chi.NewRouter()
+
 	rout.Use(middleware.RequestLogger)
 	rout.Use(middleware.GzipMiddleware)
-	rout.Post("/", h.PostURLHandlerText)
-	rout.Post("/api/shorten", h.PostURLHandlerJSON)
-	rout.Post("/api/shorten/batch", h.Batch)
-	rout.Get("/{shortURL}", h.GetURLHandler)
+
+	rout.Group(func(r chi.Router) {
+		r.Use(middleware.CookieMiddleware)
+		r.Post("/", h.PostURLHandlerText)
+		r.Post("/api/shorten", h.PostURLHandlerJSON)
+		r.Post("/api/shorten/batch", h.Batch)
+		r.Get("/{shortURL}", h.GetURLHandler)
+		r.Get("/api/user/urls", h.GetUserURLs)
+	})
+
 	rout.Get("/ping", h.Ping)
 	rout.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -55,7 +63,12 @@ func (h *URLHandler) PostURLHandlerText(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortKey, conflict := h.Shortener.Shorten(r.Context(), string(originalURL))
+	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	shortKey, conflict := h.Shortener.Shorten(r.Context(), string(originalURL), userID)
 
 	if conflict {
 		w.WriteHeader(http.StatusConflict)
@@ -85,8 +98,13 @@ func (h *URLHandler) PostURLHandlerJSON(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
+	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
-	shortKey, conflict := h.Shortener.Shorten(r.Context(), req.URL)
+	shortKey, conflict := h.Shortener.Shorten(r.Context(), req.URL, userID)
 
 	resp := models.ShortenResponse{Result: fmt.Sprintf("%s/%s", h.BaseURL, shortKey)}
 	jsonResp, err := json.Marshal(resp)
@@ -131,9 +149,9 @@ func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
-	var resp models.ShortURLBatchResponse
+	var resp []models.URLBatchResponse
 	for _, record := range req {
-		shortURL, _ := h.Shortener.Shorten(r.Context(), record.OriginalURL)
+		shortURL, _ := h.Shortener.Shorten(r.Context(), record.OriginalURL, "")
 		resp = append(resp, models.URLBatchResponse{
 			CorrelationID: record.CorrelationID,
 			ShortURL:      fmt.Sprintf("%s/%s", h.BaseURL, shortURL),
@@ -148,4 +166,35 @@ func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(jsonResp)
+}
+
+func (h *URLHandler) GetUserURLs(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	urls, err := h.Shortener.GetUserURLs(r.Context(), userID)
+	if err != nil {
+		logger.Log.Error("Failed to get user URLs", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	for i := range urls {
+		urls[i].ShortURL = fmt.Sprintf("%s/%s", h.BaseURL, urls[i].ShortURL)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(urls); err != nil {
+		logger.Log.Error("Failed to encode response", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }

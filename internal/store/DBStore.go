@@ -40,6 +40,7 @@ func (s *PostgresStore) initDB() error {
 			uuid SERIAL PRIMARY KEY,
 			short_url VARCHAR(255) UNIQUE NOT NULL,
 			original_url TEXT UNIQUE NOT NULL,
+			user_id VARCHAR(255) NOT NULL,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
@@ -50,14 +51,14 @@ func (s *PostgresStore) Ready() bool {
 	return s.db.Ping() == nil
 }
 
-func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL string) error {
+func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	_, err := s.db.ExecContext(
 		ctx,
-		"INSERT INTO urls (short_url, original_url) VALUES ($1, $2)",
-		shortURL, originalURL,
+		"INSERT INTO urls (short_url, original_url, user_id) VALUES ($1, $2, $3)",
+		shortURL, originalURL, userID,
 	)
 	return err
 }
@@ -115,7 +116,7 @@ func (s *PostgresStore) SaveBatch(records []models.URLRecord) error {
 
 	stmt, err := tx.PrepareContext(
 		context.Background(),
-		"INSERT INTO urls (short_url, original_url) VALUES ($1, $2)",
+		"INSERT INTO urls (short_url, original_url, user_id) VALUES ($1, $2, $3)",
 	)
 	if err != nil {
 		return err
@@ -123,11 +124,41 @@ func (s *PostgresStore) SaveBatch(records []models.URLRecord) error {
 	defer stmt.Close()
 
 	for _, record := range records {
-		_, err = stmt.ExecContext(context.Background(), record.ShortURL, record.OriginalURL)
+		_, err = stmt.ExecContext(context.Background(), record.ShortURL, record.OriginalURL, record.UserID)
 		if err != nil {
 			return err
 		}
 	}
 
 	return tx.Commit()
+}
+
+func (s *PostgresStore) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	rows, err := s.db.QueryContext(
+		ctx,
+		"SELECT short_url, original_url FROM urls WHERE user_id = $1",
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var urls []models.UserURLsResponse
+	for rows.Next() {
+		var url models.UserURLsResponse
+		if err := rows.Scan(&url.ShortURL, &url.OriginalURL); err != nil {
+			return nil, err
+		}
+		urls = append(urls, url)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return urls, nil
 }
