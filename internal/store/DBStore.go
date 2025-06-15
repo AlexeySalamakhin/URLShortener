@@ -40,6 +40,7 @@ func (s *PostgresStore) initDB() error {
 			uuid SERIAL PRIMARY KEY,
 			short_url VARCHAR(255) UNIQUE NOT NULL,
 			original_url TEXT UNIQUE NOT NULL,
+			user_id VARCHAR(255) NOT NULL,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
@@ -50,14 +51,14 @@ func (s *PostgresStore) Ready() bool {
 	return s.db.Ping() == nil
 }
 
-func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL string) error {
+func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	_, err := s.db.ExecContext(
 		ctx,
-		"INSERT INTO urls (short_url, original_url) VALUES ($1, $2)",
-		shortURL, originalURL,
+		"INSERT INTO urls (short_url, original_url, user_id) VALUES ($1, $2, $3)",
+		shortURL, originalURL, userID,
 	)
 	return err
 }

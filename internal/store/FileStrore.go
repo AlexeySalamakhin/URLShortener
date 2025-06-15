@@ -12,8 +12,8 @@ import (
 )
 
 type FileStore struct {
-	mu       sync.RWMutex      // Мьютекс для защиты доступа к данным
-	db       map[string]string // shortURL -> originalURL
+	mu       sync.RWMutex
+	db       map[string]models.URLRecord
 	file     *os.File
 	writer   *bufio.Writer
 	nextUUID int
@@ -27,7 +27,7 @@ func NewFileStore(filePath string) (*FileStore, error) {
 	}
 
 	store := &FileStore{
-		db:     make(map[string]string),
+		db:     make(map[string]models.URLRecord),
 		file:   file,
 		writer: bufio.NewWriter(file),
 	}
@@ -41,7 +41,7 @@ func NewFileStore(filePath string) (*FileStore, error) {
 	return store, nil
 }
 
-func (s *FileStore) Save(ctx context.Context, originalURL, shortURL string) error {
+func (s *FileStore) Save(ctx context.Context, originalURL, shortURL, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -50,13 +50,19 @@ func (s *FileStore) Save(ctx context.Context, originalURL, shortURL string) erro
 	uuid := strconv.Itoa(s.nextUUID)
 
 	// Сохраняем в памяти
-	s.db[shortURL] = originalURL
+	s.db[shortURL] = models.URLRecord{
+		UUID:        uuid,
+		ShortURL:    shortURL,
+		OriginalURL: originalURL,
+		UserID:      userID,
+	}
 
 	// Создаем запись для сохранения
 	record := models.URLRecord{
 		UUID:        uuid,
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
+		UserID:      userID,
 	}
 
 	// Кодируем в JSON
@@ -81,15 +87,15 @@ func (s *FileStore) GetOriginalURL(ctx context.Context, shortURL string) (found 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	originalURL, found = s.db[shortURL]
-	return
+	record, found := s.db[shortURL]
+	return found, record.OriginalURL
 }
 
 func (s *FileStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for k, v := range s.db {
-		if v == originalURL {
+		if v.OriginalURL == originalURL {
 			return k, nil
 		}
 	}
@@ -114,7 +120,7 @@ func (s *FileStore) loadFromFile() error {
 		if err := json.Unmarshal(scanner.Bytes(), &record); err != nil {
 			return err
 		}
-		s.db[record.ShortURL] = record.OriginalURL
+		s.db[record.ShortURL] = record
 		id, err := strconv.Atoi(record.UUID)
 		if err == nil {
 			s.nextUUID = id
@@ -136,7 +142,7 @@ func (s *FileStore) SaveBatch(records []models.URLRecord) error {
 	defer s.mu.Unlock()
 	var err error
 	for _, record := range records {
-		err = s.Save(context.Background(), record.OriginalURL, record.ShortURL)
+		err = s.Save(context.Background(), record.OriginalURL, record.ShortURL, record.UserID)
 	}
 	return err
 }
