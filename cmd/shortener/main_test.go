@@ -26,24 +26,34 @@ func TestPostURLHandlerText(t *testing.T) {
 		expectedCode int
 		expectedBody string
 		body         string
+		userID       string
 	}{
 		{
 			method:       http.MethodPost,
 			expectedCode: http.StatusCreated,
 			expectedBody: "localhost",
 			body:         "https://practicum.yandex.ru",
+			userID:       "test-user",
 		},
-		{method: http.MethodPost, expectedCode: http.StatusBadRequest, expectedBody: "", body: ""},
+		{
+			method:       http.MethodPost,
+			expectedCode: http.StatusBadRequest,
+			expectedBody: "",
+			body:         "",
+			userID:       "test-user",
+		},
 	}
 	shortener := service.NewURLShortener(store.NewInMemoryStore())
 	handler := handler.NewURLHandler(shortener, "localhost:8080")
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			r := httptest.NewRequest(tc.method, "/", strings.NewReader(tc.body))
+			ctx := context.WithValue(r.Context(), "user_id", tc.userID)
+			r = r.WithContext(ctx)
 			w := httptest.NewRecorder()
 			handler.PostURLHandlerText(w, r)
 			require.Equal(t, tc.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
-			respBody, _ := io.ReadAll(r.Body)
+			respBody, _ := io.ReadAll(w.Body)
 			require.Containsf(t, tc.expectedBody, string(respBody), "Тело ответа не содержит ссылку")
 		})
 	}
@@ -54,11 +64,13 @@ func TestGetURLHandler(t *testing.T) {
 		method       string
 		expectedCode int
 		URL          string
+		userID       string
 	}{
 		{
 			method:       http.MethodGet,
 			expectedCode: http.StatusTemporaryRedirect,
 			URL:          "https://practicum.yandex.ru",
+			userID:       "test-user",
 		},
 	}
 
@@ -67,6 +79,8 @@ func TestGetURLHandler(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.URL))
+			ctx := context.WithValue(r.Context(), "user_id", tc.userID)
+			r = r.WithContext(ctx)
 			w := httptest.NewRecorder()
 			handler.PostURLHandlerText(w, r)
 			shortURLByte, _ := io.ReadAll(w.Body)
