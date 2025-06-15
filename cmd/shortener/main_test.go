@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/handler"
+	"github.com/AlexeySalamakhin/URLShortener/internal/middleware"
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 	"github.com/AlexeySalamakhin/URLShortener/internal/service"
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
@@ -19,6 +20,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type contextKey string
+
+const userIDKey contextKey = "user_id"
 
 func TestPostURLHandlerText(t *testing.T) {
 	testCases := []struct {
@@ -48,7 +53,7 @@ func TestPostURLHandlerText(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			r := httptest.NewRequest(tc.method, "/", strings.NewReader(tc.body))
-			ctx := context.WithValue(r.Context(), "user_id", tc.userID)
+			ctx := context.WithValue(r.Context(), middleware.UserIDKey, tc.userID)
 			r = r.WithContext(ctx)
 			w := httptest.NewRecorder()
 			handler.PostURLHandlerText(w, r)
@@ -84,7 +89,7 @@ func TestGetURLHandler(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.URL))
-			ctx := context.WithValue(r.Context(), "user_id", tc.userID)
+			ctx := context.WithValue(r.Context(), middleware.UserIDKey, tc.userID)
 			r = r.WithContext(ctx)
 			w := httptest.NewRecorder()
 			handler.PostURLHandlerText(w, r)
@@ -162,7 +167,7 @@ func TestPostURLHandlerJson(t *testing.T) {
 			body, _ := json.Marshal(tt.input)
 			req, _ := http.NewRequest("POST", "/shorten", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
-			ctx := context.WithValue(req.Context(), "user_id", tt.userID)
+			ctx := context.WithValue(req.Context(), middleware.UserIDKey, tt.userID)
 			req = req.WithContext(ctx)
 			rr := httptest.NewRecorder()
 
@@ -242,7 +247,7 @@ func TestGetUserURLs(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/api/user/urls", nil)
 
 			if tt.userID != "" {
-				ctx := context.WithValue(req.Context(), "user_id", tt.userID)
+				ctx := context.WithValue(req.Context(), middleware.UserIDKey, tt.userID)
 				req = req.WithContext(ctx)
 			}
 

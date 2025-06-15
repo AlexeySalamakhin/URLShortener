@@ -7,6 +7,10 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/auth"
 )
 
+type contextKey string
+
+const UserIDKey contextKey = "user_id"
+
 func CookieMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var newCookie *http.Cookie
@@ -26,7 +30,7 @@ func CookieMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
-		ctx := context.WithValue(r.Context(), "user_id", userID)
+		ctx := context.WithValue(r.Context(), UserIDKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

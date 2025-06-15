@@ -63,7 +63,11 @@ func (h *URLHandler) PostURLHandlerText(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 	shortKey, conflict := h.Shortener.Shorten(r.Context(), string(originalURL), userID)
 
 	if conflict {
@@ -94,7 +98,11 @@ func (h *URLHandler) PostURLHandlerJSON(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
 	shortKey, conflict := h.Shortener.Shorten(r.Context(), req.URL, userID)
 
@@ -161,7 +169,7 @@ func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) GetUserURLs(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
 	if !ok {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
