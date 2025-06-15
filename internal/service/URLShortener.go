@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
 	"github.com/AlexeySalamakhin/URLShortener/internal/utils"
 )
@@ -13,6 +14,7 @@ type Store interface {
 	GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string)
 	GetShortURL(ctx context.Context, originalURL string) (string, error)
 	Ready() bool
+	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
 }
 
 type URLShortener struct {
@@ -39,4 +41,8 @@ func (u *URLShortener) GetOriginalURL(ctx context.Context, shortURL string) (boo
 
 func (u *URLShortener) StoreReady() bool {
 	return u.store.Ready()
+}
+
+func (u *URLShortener) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
+	return u.store.GetUserURLs(ctx, userID)
 }

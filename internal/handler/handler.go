@@ -19,6 +19,7 @@ type URLShortener interface {
 	Shorten(ctx context.Context, originalURL string, userID string) (string, bool)
 	GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string)
 	StoreReady() bool
+	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
 }
 
 type URLHandler struct {
@@ -41,6 +42,7 @@ func (h *URLHandler) SetupRouter() *chi.Mux {
 		r.Post("/api/shorten", h.PostURLHandlerJSON)
 		r.Post("/api/shorten/batch", h.Batch)
 		r.Get("/{shortURL}", h.GetURLHandler)
+		r.Get("/api/user/urls", h.GetUserURLs)
 	})
 
 	rout.Get("/ping", h.Ping)
@@ -156,4 +158,35 @@ func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(jsonResp)
+}
+
+func (h *URLHandler) GetUserURLs(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	urls, err := h.Shortener.GetUserURLs(r.Context(), userID)
+	if err != nil {
+		logger.Log.Error("Failed to get user URLs", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	for i := range urls {
+		urls[i].ShortURL = fmt.Sprintf("%s/%s", h.BaseURL, urls[i].ShortURL)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(urls); err != nil {
+		logger.Log.Error("Failed to encode response", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }

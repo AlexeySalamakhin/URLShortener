@@ -52,3 +52,16 @@ func (s *InMemoryStore) SaveBatch(records []models.URLRecord) error {
 	}
 	return err
 }
+
+func (s *InMemoryStore) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
+	var urls []models.UserURLsResponse
+	for _, record := range s.db {
+		if record.UserID == userID {
+			urls = append(urls, models.UserURLsResponse{
+				ShortURL:    record.ShortURL,
+				OriginalURL: record.OriginalURL,
+			})
+		}
+	}
+	return urls, nil
+}

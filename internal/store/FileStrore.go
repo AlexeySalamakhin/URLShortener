@@ -146,3 +146,19 @@ func (s *FileStore) SaveBatch(records []models.URLRecord) error {
 	}
 	return err
 }
+
+func (s *FileStore) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var urls []models.UserURLsResponse
+	for _, record := range s.db {
+		if record.UserID == userID {
+			urls = append(urls, models.UserURLsResponse{
+				ShortURL:    record.ShortURL,
+				OriginalURL: record.OriginalURL,
+			})
+		}
+	}
+	return urls, nil
+}
