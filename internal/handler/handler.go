@@ -217,7 +217,8 @@ func (h *URLHandler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	go func() {
-		if err := h.Shortener.DeleteUserURLs(r.Context(), userID, ids); err != nil {
+		ctx := context.Background()
+		if err := h.Shortener.DeleteUserURLs(ctx, userID, ids); err != nil {
 			logger.Log.Error("Failed to delete user URLs", zap.Error(err))
 		}
 	}()
