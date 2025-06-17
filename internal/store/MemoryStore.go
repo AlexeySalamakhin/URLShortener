@@ -19,16 +19,17 @@ func (s *InMemoryStore) Save(ctx context.Context, originalURL string, shortURL s
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 		UserID:      userID,
+		DeletedFlag: false,
 	}
 	return nil
 }
 
-func (s *InMemoryStore) GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string) {
+func (s *InMemoryStore) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
 	record, found := s.db[shortURL]
 	if !found {
-		return false, ""
+		return models.UserURLsResponse{}, false
 	}
-	return true, record.OriginalURL
+	return models.UserURLsResponse{ShortURL: record.ShortURL, OriginalURL: record.OriginalURL, DeletedFlag: record.DeletedFlag}, true
 }
 
 func (s *InMemoryStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
@@ -56,7 +57,7 @@ func (s *InMemoryStore) SaveBatch(records []models.URLRecord) error {
 func (s *InMemoryStore) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
 	var urls []models.UserURLsResponse
 	for _, record := range s.db {
-		if record.UserID == userID {
+		if record.UserID == userID && !record.DeletedFlag {
 			urls = append(urls, models.UserURLsResponse{
 				ShortURL:    record.ShortURL,
 				OriginalURL: record.OriginalURL,
@@ -64,4 +65,14 @@ func (s *InMemoryStore) GetUserURLs(ctx context.Context, userID string) ([]model
 		}
 	}
 	return urls, nil
+}
+
+func (s *InMemoryStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
+	for _, id := range ids {
+		record, ok := s.db[id]
+		if ok && record.UserID == userID && !record.DeletedFlag {
+			record.DeletedFlag = true
+			s.db[id] = record
+		}
+	}
 }

@@ -11,10 +11,11 @@ import (
 
 type Store interface {
 	Save(ctx context.Context, originalURL string, shortURL string, userID string) error
-	GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string)
+	GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool)
 	GetShortURL(ctx context.Context, originalURL string) (string, error)
 	Ready() bool
 	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
+	DeleteUserURLs(ctx context.Context, userID string, ids []string)
 }
 
 type URLShortener struct {
@@ -35,8 +36,9 @@ func (u *URLShortener) Shorten(ctx context.Context, originalURL string, userID s
 	return foundURL, true
 }
 
-func (u *URLShortener) GetOriginalURL(ctx context.Context, shortURL string) (bool, string) {
-	return u.store.GetOriginalURL(ctx, shortURL)
+func (u *URLShortener) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
+	record, found := u.store.GetOriginalURL(ctx, shortURL)
+	return record, found
 }
 
 func (u *URLShortener) StoreReady() bool {
@@ -45,4 +47,8 @@ func (u *URLShortener) StoreReady() bool {
 
 func (u *URLShortener) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
 	return u.store.GetUserURLs(ctx, userID)
+}
+
+func (u *URLShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
+	u.store.DeleteUserURLs(ctx, userID, ids)
 }

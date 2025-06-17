@@ -55,6 +55,7 @@ func (s *FileStore) Save(ctx context.Context, originalURL, shortURL, userID stri
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 		UserID:      userID,
+		DeletedFlag: false,
 	}
 
 	// Создаем запись для сохранения
@@ -63,6 +64,7 @@ func (s *FileStore) Save(ctx context.Context, originalURL, shortURL, userID stri
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 		UserID:      userID,
+		DeletedFlag: false,
 	}
 
 	// Кодируем в JSON
@@ -83,19 +85,22 @@ func (s *FileStore) Save(ctx context.Context, originalURL, shortURL, userID stri
 	return s.writer.Flush()
 }
 
-func (s *FileStore) GetOriginalURL(ctx context.Context, shortURL string) (found bool, originalURL string) {
+func (s *FileStore) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	record, found := s.db[shortURL]
-	return found, record.OriginalURL
+	if !found {
+		return models.UserURLsResponse{}, false
+	}
+	return models.UserURLsResponse{ShortURL: record.ShortURL, OriginalURL: record.OriginalURL, DeletedFlag: record.DeletedFlag}, true
 }
 
 func (s *FileStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for k, v := range s.db {
-		if v.OriginalURL == originalURL {
+		if v.OriginalURL == originalURL && !v.DeletedFlag {
 			return k, nil
 		}
 	}
@@ -153,7 +158,7 @@ func (s *FileStore) GetUserURLs(ctx context.Context, userID string) ([]models.Us
 
 	var urls []models.UserURLsResponse
 	for _, record := range s.db {
-		if record.UserID == userID {
+		if record.UserID == userID && !record.DeletedFlag {
 			urls = append(urls, models.UserURLsResponse{
 				ShortURL:    record.ShortURL,
 				OriginalURL: record.OriginalURL,
@@ -161,4 +166,33 @@ func (s *FileStore) GetUserURLs(ctx context.Context, userID string) ([]models.Us
 		}
 	}
 	return urls, nil
+}
+
+func (s *FileStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	changed := false
+	for _, id := range ids {
+		record, ok := s.db[id]
+		if ok && record.UserID == userID && !record.DeletedFlag {
+			record.DeletedFlag = true
+			s.db[id] = record
+			changed = true
+		}
+	}
+	if changed {
+		s.saveAllToFile()
+	}
+}
+
+func (s *FileStore) saveAllToFile() {
+	s.file.Truncate(0)
+	s.file.Seek(0, 0)
+	s.writer.Reset(s.file)
+	for _, record := range s.db {
+		data, _ := json.Marshal(record)
+		s.writer.Write(data)
+		s.writer.WriteString("\n")
+	}
+	s.writer.Flush()
 }

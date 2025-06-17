@@ -117,14 +117,18 @@ func (m *MockShortener) Shorten(ctx context.Context, url string, userID string) 
 	return args.String(0), args.Bool(1)
 }
 
-func (m *MockShortener) GetOriginalURL(ctx context.Context, url string) (bool, string) {
+func (m *MockShortener) GetOriginalURL(ctx context.Context, url string) (models.UserURLsResponse, bool) {
 	args := m.Called(ctx, url)
-	return args.Bool(0), args.String(1)
+	return args.Get(0).(models.UserURLsResponse), args.Bool(1)
 }
 
 func (m *MockShortener) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
 	args := m.Called(ctx, userID)
 	return args.Get(0).([]models.UserURLsResponse), args.Error(1)
+}
+
+func (m *MockShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
+	m.Called(ctx, userID, ids)
 }
 
 func (m *MockShortener) NewURLShortener() *MockShortener {
