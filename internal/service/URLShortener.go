@@ -15,7 +15,7 @@ type Store interface {
 	GetShortURL(ctx context.Context, originalURL string) (string, error)
 	Ready() bool
 	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
-	DeleteUserURLs(ctx context.Context, userID string, ids []string)
+	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
 }
 
 type URLShortener struct {
@@ -49,6 +49,6 @@ func (u *URLShortener) GetUserURLs(ctx context.Context, userID string) ([]models
 	return u.store.GetUserURLs(ctx, userID)
 }
 
-func (u *URLShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
-	u.store.DeleteUserURLs(ctx, userID, ids)
+func (u *URLShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
+	return u.store.DeleteUserURLs(ctx, userID, ids)
 }

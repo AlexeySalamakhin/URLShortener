@@ -127,8 +127,9 @@ func (m *MockShortener) GetUserURLs(ctx context.Context, userID string) ([]model
 	return args.Get(0).([]models.UserURLsResponse), args.Error(1)
 }
 
-func (m *MockShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
-	m.Called(ctx, userID, ids)
+func (m *MockShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
+	args := m.Called(ctx, userID, ids)
+	return args.Error(0)
 }
 
 func (m *MockShortener) NewURLShortener() *MockShortener {

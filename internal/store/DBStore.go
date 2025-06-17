@@ -166,12 +166,13 @@ func (s *PostgresStore) GetUserURLs(ctx context.Context, userID string) ([]model
 	return urls, nil
 }
 
-func (s *PostgresStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
+func (s *PostgresStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if len(ids) == 0 {
-		return
+		return nil
 	}
 	query := "UPDATE urls SET is_deleted = TRUE WHERE user_id = $1 AND short_url = ANY($2)"
-	_, _ = s.db.ExecContext(ctx, query, userID, ids)
+	_, err := s.db.ExecContext(ctx, query, userID, ids)
+	return err
 }

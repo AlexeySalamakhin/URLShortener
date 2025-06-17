@@ -67,7 +67,7 @@ func (s *InMemoryStore) GetUserURLs(ctx context.Context, userID string) ([]model
 	return urls, nil
 }
 
-func (s *InMemoryStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
+func (s *InMemoryStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
 	for _, id := range ids {
 		record, ok := s.db[id]
 		if ok && record.UserID == userID && !record.DeletedFlag {
@@ -75,4 +75,5 @@ func (s *InMemoryStore) DeleteUserURLs(ctx context.Context, userID string, ids [
 			s.db[id] = record
 		}
 	}
+	return nil
 }

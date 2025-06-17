@@ -168,7 +168,7 @@ func (s *FileStore) GetUserURLs(ctx context.Context, userID string) ([]models.Us
 	return urls, nil
 }
 
-func (s *FileStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) {
+func (s *FileStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	changed := false
@@ -183,6 +183,7 @@ func (s *FileStore) DeleteUserURLs(ctx context.Context, userID string, ids []str
 	if changed {
 		s.saveAllToFile()
 	}
+	return nil
 }
 
 func (s *FileStore) saveAllToFile() {

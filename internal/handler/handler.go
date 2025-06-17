@@ -20,7 +20,7 @@ type URLShortener interface {
 	GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool)
 	StoreReady() bool
 	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
-	DeleteUserURLs(ctx context.Context, userID string, ids []string)
+	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
 }
 
 type URLHandler struct {
@@ -216,6 +216,10 @@ func (h *URLHandler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	go h.Shortener.DeleteUserURLs(r.Context(), userID, ids)
+	go func() {
+		if err := h.Shortener.DeleteUserURLs(r.Context(), userID, ids); err != nil {
+			logger.Log.Error("Failed to delete user URLs", zap.Error(err))
+		}
+	}()
 	w.WriteHeader(http.StatusAccepted)
 }

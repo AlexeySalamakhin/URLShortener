@@ -18,7 +18,7 @@ type Store interface {
 	Ready() bool
 	GetShortURL(ctx context.Context, shortURL string) (string, error)
 	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
-	DeleteUserURLs(ctx context.Context, userID string, ids []string)
+	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
 }
 
 func InitStore(cfg *config.Config) (Store, error) {
