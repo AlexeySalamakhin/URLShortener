@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
@@ -49,6 +50,93 @@ func (u *URLShortener) GetUserURLs(ctx context.Context, userID string) ([]models
 	return u.store.GetUserURLs(ctx, userID)
 }
 
+func fanIn(doneCh chan struct{}, resultChs ...chan error) chan error {
+	finalCh := make(chan error)
+
+	var wg sync.WaitGroup
+
+	for _, ch := range resultChs {
+		chClosure := ch
+
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			for data := range chClosure {
+				select {
+				case <-doneCh:
+					return
+				case finalCh <- data:
+				}
+			}
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(finalCh)
+	}()
+
+	return finalCh
+}
+
 func (u *URLShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
-	return u.store.DeleteUserURLs(ctx, userID, ids)
+	if len(ids) == 0 {
+		return nil
+	}
+
+	const batchSize = 10
+
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+
+	var batches [][]string
+	for i := 0; i < len(ids); i += batchSize {
+		end := i + batchSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+		batches = append(batches, ids[i:end])
+	}
+
+	batchChs := make([]chan error, len(batches))
+	for i := range batchChs {
+		batchChs[i] = make(chan error, 1)
+	}
+
+	resultCh := fanIn(doneCh, batchChs...)
+
+	var wg sync.WaitGroup
+	for i, batch := range batches {
+		wg.Add(1)
+		go func(batchIndex int, batch []string) {
+			defer wg.Done()
+			defer close(batchChs[batchIndex])
+
+			select {
+			case <-ctx.Done():
+				batchChs[batchIndex] <- ctx.Err()
+				return
+			default:
+			}
+
+			if err := u.store.DeleteUserURLs(ctx, userID, batch); err != nil {
+				batchChs[batchIndex] <- err
+				return
+			}
+		}(i, batch)
+	}
+
+	go func() {
+		wg.Wait()
+	}()
+
+	for err := range resultCh {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
