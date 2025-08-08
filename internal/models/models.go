@@ -4,6 +4,8 @@ type URLRecord struct {
 	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	UserID      string `json:"user_id"`
+	DeletedFlag bool   `json:"is_deleted"`
 }
 
 type ShortenRequest struct {
@@ -21,24 +23,13 @@ type URLBatchRequest struct {
 	OriginalURL   string `json:"original_url"`
 }
 
-type ShortURLBatchResponse []URLBatchResponse
-
 type URLBatchResponse struct {
 	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
 }
 
-// [
-//     {
-//         "correlation_id": "<строковый идентификатор из объекта запроса>",
-//         "short_url": "<результирующий сокращённый URL>"
-//     },
-//     ...
-// ]
-// [
-//     {
-//         "correlation_id": "<строковый идентификатор>",
-//         "original_url": "<URL для сокращения>"
-//     },
-//     ...
-// ]
+type UserURLsResponse struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+	DeletedFlag bool   `json:"is_deleted"`
+}
