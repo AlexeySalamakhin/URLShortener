@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/config"
@@ -12,13 +13,10 @@ import (
 
 func main() {
 	config := config.NewConfigs()
+	flag.Parse()
 	logger.Initialize("info")
 
 	store, err := store.InitStore(config)
-
-	if err != nil {
-		logger.Log.Fatal(err.Error())
-	}
 	if err != nil {
 		logger.Log.Fatal(err.Error())
 	}

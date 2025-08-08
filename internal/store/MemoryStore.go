@@ -55,7 +55,14 @@ func (s *InMemoryStore) SaveBatch(records []models.URLRecord) error {
 }
 
 func (s *InMemoryStore) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
-	var urls []models.UserURLsResponse
+	count := 0
+	for _, record := range s.db {
+		if record.UserID == userID && !record.DeletedFlag {
+			count++
+		}
+	}
+
+	urls := make([]models.UserURLsResponse, 0, count)
 	for _, record := range s.db {
 		if record.UserID == userID && !record.DeletedFlag {
 			urls = append(urls, models.UserURLsResponse{
