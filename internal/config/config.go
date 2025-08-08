@@ -25,6 +25,5 @@ func (c *Config) parseFlags() {
 	flag.StringVar(&c.BaseURL, "b", "http://localhost:8080", "Base URL")
 	flag.StringVar(&c.File, "f", "urls.txt", "File")
 	flag.StringVar(&c.ConnectionString, "d", "", "Connection string")
-	flag.Parse()
 
 }
