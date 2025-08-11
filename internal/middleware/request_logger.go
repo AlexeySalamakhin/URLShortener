@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/AlexeySalamakhin/URLShortener/internal/logger"
 	"go.uber.org/zap"
+
+	"github.com/AlexeySalamakhin/URLShortener/internal/logger"
 )
 
 func RequestLogger(next http.Handler) http.Handler {

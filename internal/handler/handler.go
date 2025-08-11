@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/go-chi/chi"
+	"go.uber.org/zap"
+
 	logger "github.com/AlexeySalamakhin/URLShortener/internal/logger"
 	"github.com/AlexeySalamakhin/URLShortener/internal/middleware"
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
-	"github.com/go-chi/chi"
-	"go.uber.org/zap"
 )
 
 type URLShortener interface {

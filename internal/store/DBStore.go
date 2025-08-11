@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
+
+	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
 type PostgresStore struct {
