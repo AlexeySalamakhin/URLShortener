@@ -2,6 +2,7 @@ package utils
 
 import "math/rand"
 
+// GenerateShortURL генерирует псевдослучайный короткий ключ фиксированной длины.
 func GenerateShortURL() string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const keyLength = 6

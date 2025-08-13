@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// GzipMiddleware сжимает ответы сервера и распаковывает входящие запросы в формате gzip,
+// если это поддерживает клиент и/или указано в заголовках.
 func GzipMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

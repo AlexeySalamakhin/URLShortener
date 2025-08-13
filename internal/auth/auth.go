@@ -12,6 +12,7 @@ import (
 
 const secretKey = "secret_key"
 
+// GenerateCookie создаёт подписанную cookie с идентификатором пользователя.
 func GenerateCookie(userID string) *http.Cookie {
 
 	h := hmac.New(sha256.New, []byte(secretKey))
@@ -24,15 +25,18 @@ func GenerateCookie(userID string) *http.Cookie {
 	}
 }
 
+// GenerateUserID генерирует и возвращает новый уникальный идентификатор пользователя.
 func GenerateUserID() string {
 	return uuid.New().String()
 }
 
+// GetUserID извлекает идентификатор пользователя из значения cookie.
 func GetUserID(cookie *http.Cookie) string {
 	parts := strings.Split(cookie.Value, "|")
 	return parts[0]
 }
 
+// ValidateCookie проверяет подпись cookie и возвращает её валидность.
 func ValidateCookie(cookie *http.Cookie) bool {
 	if cookie == nil {
 		return false

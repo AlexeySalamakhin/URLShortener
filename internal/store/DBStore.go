@@ -12,11 +12,13 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
+// PostgresStore реализует хранилище ссылок на базе PostgreSQL.
 type PostgresStore struct {
 	mu sync.RWMutex
 	db *sql.DB
 }
 
+// NewDBStore инициализирует подключение к БД и возвращает экземпляр PostgresStore.
 func NewDBStore(connStr string) (*PostgresStore, error) {
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
@@ -49,10 +51,12 @@ func (s *PostgresStore) initDB() error {
 	return err
 }
 
+// Ready проверяет доступность соединения с БД.
 func (s *PostgresStore) Ready() bool {
 	return s.db.Ping() == nil
 }
 
+// Save сохраняет новую пару короткий/исходный URL.
 func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -65,6 +69,7 @@ func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL, userID 
 	return err
 }
 
+// GetOriginalURL возвращает исходный URL по короткому.
 func (s *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -87,6 +92,7 @@ func (s *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (mo
 	return models.UserURLsResponse{ShortURL: shortURL, OriginalURL: originalURL, DeletedFlag: deleted}, true
 }
 
+// GetShortURL возвращает короткий URL по исходному или ошибку, если не найден.
 func (s *PostgresStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -108,6 +114,7 @@ func (s *PostgresStore) GetShortURL(ctx context.Context, originalURL string) (st
 	return shortURL, nil
 }
 
+// SaveBatch сохраняет набор записей в транзакции.
 func (s *PostgresStore) SaveBatch(records []models.URLRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -137,6 +144,7 @@ func (s *PostgresStore) SaveBatch(records []models.URLRecord) error {
 	return tx.Commit()
 }
 
+// GetUserURLs возвращает список ссылок пользователя.
 func (s *PostgresStore) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -167,6 +175,7 @@ func (s *PostgresStore) GetUserURLs(ctx context.Context, userID string) ([]model
 	return urls, nil
 }
 
+// DeleteUserURLs помечает ссылки пользователя как удалённые.
 func (s *PostgresStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

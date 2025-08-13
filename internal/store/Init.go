@@ -9,9 +9,11 @@ import (
 )
 
 var (
+	// ErrShortURLNotFound возвращается, когда короткий ключ для исходного URL не найден.
 	ErrShortURLNotFound = errors.New("short URL not found")
 )
 
+// Store описывает контракт хранилища для разных реализаций.
 type Store interface {
 	Save(ctx context.Context, originalURL string, shortURL string, userID string) error
 	GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool)
@@ -21,6 +23,7 @@ type Store interface {
 	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
 }
 
+// InitStore инициализирует подходящее хранилище в зависимости от конфигурации.
 func InitStore(cfg *config.Config) (Store, error) {
 	switch {
 	case cfg.ConnectionString != "":

@@ -16,6 +16,7 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
+// URLShortener описывает интерфейс сервиса сокращения URL.
 type URLShortener interface {
 	Shorten(ctx context.Context, originalURL string, userID string) (string, bool)
 	GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool)
@@ -24,14 +25,18 @@ type URLShortener interface {
 	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
 }
 
+// URLHandler обрабатывает HTTP-запросы для сервиса сокращения URL.
 type URLHandler struct {
 	Shortener URLShortener
 	BaseURL   string
 }
 
+// NewURLHandler создаёт новый экземпляр обработчика с заданным сервисом и базовым URL.
 func NewURLHandler(shortener URLShortener, baseURL string) *URLHandler {
 	return &URLHandler{Shortener: shortener, BaseURL: baseURL}
 }
+
+// SetupRouter настраивает маршруты HTTP и возвращает роутер chi.Mux.
 func (h *URLHandler) SetupRouter() *chi.Mux {
 	rout := chi.NewRouter()
 
@@ -55,6 +60,7 @@ func (h *URLHandler) SetupRouter() *chi.Mux {
 	return rout
 }
 
+// PostURLHandlerText принимает исходный URL в теле запроса (text/plain) и возвращает сокращённый URL.
 func (h *URLHandler) PostURLHandlerText(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	originalURL, err := io.ReadAll(r.Body)
@@ -82,6 +88,7 @@ func (h *URLHandler) PostURLHandlerText(w http.ResponseWriter, r *http.Request) 
 	w.Write(fmt.Appendf(nil, "%s/%s", h.BaseURL, shortKey))
 }
 
+// PostURLHandlerJSON принимает JSON с полем url и возвращает JSON с результатом сокращения.
 func (h *URLHandler) PostURLHandlerJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
@@ -126,6 +133,7 @@ func (h *URLHandler) PostURLHandlerJSON(w http.ResponseWriter, r *http.Request) 
 	w.Write(jsonResp)
 }
 
+// GetURLHandler делает редирект на исходный URL по короткому ключу.
 func (h *URLHandler) GetURLHandler(w http.ResponseWriter, r *http.Request) {
 	shortURL := r.URL.Path[1:]
 	record, found := h.Shortener.GetOriginalURL(r.Context(), shortURL)
@@ -140,6 +148,7 @@ func (h *URLHandler) GetURLHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, record.OriginalURL, http.StatusTemporaryRedirect)
 }
 
+// Ping проверяет готовность хранилища.
 func (h *URLHandler) Ping(w http.ResponseWriter, r *http.Request) {
 	if h.Shortener.StoreReady() {
 		w.WriteHeader(http.StatusOK)
@@ -148,6 +157,7 @@ func (h *URLHandler) Ping(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusInternalServerError)
 }
 
+// Batch обрабатывает пакетное сокращение URL.
 func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 	var req models.ShortURLBatchRequest
 	dec := json.NewDecoder(r.Body)
@@ -175,6 +185,7 @@ func (h *URLHandler) Batch(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
+// GetUserURLs возвращает список URL пользователя.
 func (h *URLHandler) GetUserURLs(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
 	if !ok {
@@ -206,6 +217,7 @@ func (h *URLHandler) GetUserURLs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteUserURLs помечает ссылки пользователя как удалённые (асинхронно).
 func (h *URLHandler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(string)
 	if !ok {
