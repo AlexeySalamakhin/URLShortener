@@ -8,8 +8,8 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
+// ErrShortURLNotFound возвращается, когда короткий ключ для исходного URL не найден.
 var (
-	// ErrShortURLNotFound возвращается, когда короткий ключ для исходного URL не найден.
 	ErrShortURLNotFound = errors.New("short URL not found")
 )
 
