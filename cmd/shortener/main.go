@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/config"
@@ -11,7 +12,25 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 func main() {
+	// Вывод информации о сборке
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+
 	config := config.NewConfigs()
 	flag.Parse()
 	logger.Initialize("info")
