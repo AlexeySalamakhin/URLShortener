@@ -20,9 +20,16 @@ func main() {
 	if err != nil {
 		logger.Log.Fatal(err.Error())
 	}
+	defer func() {
+		if err := store.Close(); err != nil {
+			logger.Log.Error("Failed to close store: " + err.Error())
+		}
+	}()
+
 	urlShortener := service.NewURLShortener(store)
 	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL)
 	r := urlHandler.SetupRouter()
+
 	err = http.ListenAndServe(config.ServerAddr, r)
 	if err != nil {
 		panic(err)

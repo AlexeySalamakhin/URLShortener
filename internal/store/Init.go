@@ -21,6 +21,7 @@ type Store interface {
 	GetShortURL(ctx context.Context, shortURL string) (string, error)
 	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
 	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
+	Close() error
 }
 
 // InitStore инициализирует подходящее хранилище в зависимости от конфигурации.

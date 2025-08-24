@@ -93,3 +93,8 @@ func (s *InMemoryStore) DeleteUserURLs(ctx context.Context, userID string, ids [
 	}
 	return nil
 }
+
+// Close закрывает in-memory хранилище (ничего не делает).
+func (s *InMemoryStore) Close() error {
+	return nil
+}
