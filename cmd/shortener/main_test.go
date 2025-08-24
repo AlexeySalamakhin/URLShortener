@@ -11,14 +11,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/AlexeySalamakhin/URLShortener/internal/handler"
 	"github.com/AlexeySalamakhin/URLShortener/internal/middleware"
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 	"github.com/AlexeySalamakhin/URLShortener/internal/service"
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 type contextKey string

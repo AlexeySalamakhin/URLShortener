@@ -6,6 +6,8 @@ import (
 	"github.com/caarlos0/env"
 )
 
+// Config содержит конфигурационные параметры приложения, доступные через
+// флаги командной строки и переменные окружения.
 type Config struct {
 	ServerAddr       string `env:"SERVER_ADDRESS"`
 	BaseURL          string `env:"BASE_URL"`
@@ -13,6 +15,7 @@ type Config struct {
 	ConnectionString string `env:"DATABASE_DSN"`
 }
 
+// NewConfigs создаёт структуру конфигурации, парсит флаги и переменные окружения.
 func NewConfigs() *Config {
 	var c Config
 	c.parseFlags()
@@ -20,11 +23,11 @@ func NewConfigs() *Config {
 	return &c
 }
 
+// parseFlags настраивает и регистрирует флаги командной строки.
 func (c *Config) parseFlags() {
 	flag.StringVar(&c.ServerAddr, "a", ":8080", "Server address")
 	flag.StringVar(&c.BaseURL, "b", "http://localhost:8080", "Base URL")
 	flag.StringVar(&c.File, "f", "urls.txt", "File")
 	flag.StringVar(&c.ConnectionString, "d", "", "Connection string")
-	flag.Parse()
 
 }

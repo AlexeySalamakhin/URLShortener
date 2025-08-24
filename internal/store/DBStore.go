@@ -2,32 +2,38 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-	"sync"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
-	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
 
+// PostgresStore реализует хранилище ссылок на базе PostgreSQL.
 type PostgresStore struct {
-	mu sync.RWMutex
-	db *sql.DB
+	pool *pgxpool.Pool
 }
 
+// NewDBStore инициализирует подключение к БД и возвращает экземпляр PostgresStore.
 func NewDBStore(connStr string) (*PostgresStore, error) {
-	db, err := sql.Open("pgx", connStr)
+	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %v", err)
+		return nil, fmt.Errorf("failed to parse connection string: %v", err)
+	}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create connection pool: %v", err)
 	}
 
 	store := &PostgresStore{
-		db: db,
+		pool: pool,
 	}
 
 	if err := store.initDB(); err != nil {
-		db.Close()
+		pool.Close()
 		return nil, fmt.Errorf("failed to initialize database: %v", err)
 	}
 
@@ -35,7 +41,7 @@ func NewDBStore(connStr string) (*PostgresStore, error) {
 }
 
 func (s *PostgresStore) initDB() error {
-	_, err := s.db.Exec(`
+	_, err := s.pool.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS urls (
 			uuid SERIAL PRIMARY KEY,
 			short_url VARCHAR(255) UNIQUE NOT NULL,
@@ -48,15 +54,14 @@ func (s *PostgresStore) initDB() error {
 	return err
 }
 
+// Ready проверяет доступность соединения с БД.
 func (s *PostgresStore) Ready() bool {
-	return s.db.Ping() == nil
+	return s.pool.Ping(context.Background()) == nil
 }
 
+// Save сохраняет новую пару короткий/исходный URL.
 func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL, userID string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	_, err := s.db.ExecContext(
+	_, err := s.pool.Exec(
 		ctx,
 		"INSERT INTO urls (short_url, original_url, user_id, is_deleted) VALUES ($1, $2, $3, FALSE)",
 		shortURL, originalURL, userID,
@@ -64,20 +69,18 @@ func (s *PostgresStore) Save(ctx context.Context, originalURL, shortURL, userID 
 	return err
 }
 
+// GetOriginalURL возвращает исходный URL по короткому.
 func (s *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	var originalURL, userID string
 	var deleted bool
-	err := s.db.QueryRowContext(
+	err := s.pool.QueryRow(
 		ctx,
 		"SELECT original_url, user_id, is_deleted FROM urls WHERE short_url = $1",
 		shortURL,
 	).Scan(&originalURL, &userID, &deleted)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return models.UserURLsResponse{}, false
 		}
 		return models.UserURLsResponse{}, false
@@ -86,19 +89,18 @@ func (s *PostgresStore) GetOriginalURL(ctx context.Context, shortURL string) (mo
 	return models.UserURLsResponse{ShortURL: shortURL, OriginalURL: originalURL, DeletedFlag: deleted}, true
 }
 
+// GetShortURL возвращает короткий URL по исходному или ошибку, если не найден.
 func (s *PostgresStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	shortURL := ""
+	var shortURL string
 
-	err := s.db.QueryRowContext(
+	err := s.pool.QueryRow(
 		ctx,
 		"SELECT short_url FROM urls WHERE original_url = $1 AND is_deleted = FALSE",
 		originalURL,
 	).Scan(&shortURL)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return "", ErrShortURLNotFound
 		}
 		return "", fmt.Errorf("database error: %w", err)
@@ -107,40 +109,39 @@ func (s *PostgresStore) GetShortURL(ctx context.Context, originalURL string) (st
 	return shortURL, nil
 }
 
+// SaveBatch сохраняет набор записей в транзакции.
 func (s *PostgresStore) SaveBatch(records []models.URLRecord) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	tx, err := s.db.Begin()
+	ctx := context.Background()
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
-	stmt, err := tx.PrepareContext(
-		context.Background(),
-		"INSERT INTO urls (short_url, original_url, user_id, is_deleted) VALUES ($1, $2, $3, FALSE)",
-	)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
+	batch := &pgx.Batch{}
 	for _, record := range records {
-		_, err = stmt.ExecContext(context.Background(), record.ShortURL, record.OriginalURL, record.UserID)
+		batch.Queue(
+			"INSERT INTO urls (short_url, original_url, user_id, is_deleted) VALUES ($1, $2, $3, FALSE)",
+			record.ShortURL, record.OriginalURL, record.UserID,
+		)
+	}
+
+	br := tx.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for i := 0; i < batch.Len(); i++ {
+		_, err := br.Exec()
 		if err != nil {
 			return err
 		}
 	}
 
-	return tx.Commit()
+	return tx.Commit(ctx)
 }
 
+// GetUserURLs возвращает список ссылок пользователя.
 func (s *PostgresStore) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	rows, err := s.db.QueryContext(
+	rows, err := s.pool.Query(
 		ctx,
 		"SELECT short_url, original_url FROM urls WHERE user_id = $1 AND is_deleted = FALSE",
 		userID,
@@ -166,13 +167,17 @@ func (s *PostgresStore) GetUserURLs(ctx context.Context, userID string) ([]model
 	return urls, nil
 }
 
+// DeleteUserURLs помечает ссылки пользователя как удалённые.
 func (s *PostgresStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if len(ids) == 0 {
 		return nil
 	}
-	query := "UPDATE urls SET is_deleted = TRUE WHERE user_id = $1 AND short_url = ANY($2)"
-	_, err := s.db.ExecContext(ctx, query, userID, ids)
+	_, err := s.pool.Exec(ctx, "UPDATE urls SET is_deleted = TRUE WHERE user_id = $1 AND short_url = ANY($2)", userID, ids)
 	return err
+}
+
+// Close закрывает пул соединений.
+func (s *PostgresStore) Close() error {
+	s.pool.Close()
+	return nil
 }

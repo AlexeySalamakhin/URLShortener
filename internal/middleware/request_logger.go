@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/AlexeySalamakhin/URLShortener/internal/logger"
 	"go.uber.org/zap"
+
+	"github.com/AlexeySalamakhin/URLShortener/internal/logger"
 )
 
+// RequestLogger логирует входящие HTTP-запросы и исходящие ответы с длительностью.
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -47,12 +49,14 @@ type (
 	}
 )
 
+// Write записывает тело ответа и учитывает его размер для логирования.
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
+// WriteHeader фиксирует статус ответа для последующего логирования.
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode

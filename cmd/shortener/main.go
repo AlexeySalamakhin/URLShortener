@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 
 	"github.com/AlexeySalamakhin/URLShortener/internal/config"
@@ -12,19 +13,23 @@ import (
 
 func main() {
 	config := config.NewConfigs()
+	flag.Parse()
 	logger.Initialize("info")
 
 	store, err := store.InitStore(config)
+	if err != nil {
+		logger.Log.Fatal(err.Error())
+	}
+	defer func() {
+		if err := store.Close(); err != nil {
+			logger.Log.Error("Failed to close store: " + err.Error())
+		}
+	}()
 
-	if err != nil {
-		logger.Log.Fatal(err.Error())
-	}
-	if err != nil {
-		logger.Log.Fatal(err.Error())
-	}
 	urlShortener := service.NewURLShortener(store)
 	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL)
 	r := urlHandler.SetupRouter()
+
 	err = http.ListenAndServe(config.ServerAddr, r)
 	if err != nil {
 		panic(err)

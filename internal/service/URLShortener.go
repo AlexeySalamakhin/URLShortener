@@ -10,6 +10,7 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/utils"
 )
 
+// Store описывает контракт хранилища для сервиса сокращения URL.
 type Store interface {
 	Save(ctx context.Context, originalURL string, shortURL string, userID string) error
 	GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool)
@@ -19,14 +20,18 @@ type Store interface {
 	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
 }
 
+// URLShortener реализует бизнес-логику сокращения ссылок.
 type URLShortener struct {
 	store Store
 }
 
+// NewURLShortener создаёт новый экземпляр сервиса с переданным хранилищем.
 func NewURLShortener(store Store) *URLShortener {
 	return &URLShortener{store: store}
 }
 
+// Shorten сокращает исходный URL и возвращает короткий ключ.
+// Второй параметр возвращаемого значения равен true, если ссылка уже существовала.
 func (u *URLShortener) Shorten(ctx context.Context, originalURL string, userID string) (string, bool) {
 	foundURL, err := u.store.GetShortURL(ctx, originalURL)
 	if err != nil && errors.Is(err, store.ErrShortURLNotFound) {
@@ -37,15 +42,18 @@ func (u *URLShortener) Shorten(ctx context.Context, originalURL string, userID s
 	return foundURL, true
 }
 
+// GetOriginalURL возвращает исходный URL по короткому ключу.
 func (u *URLShortener) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
 	record, found := u.store.GetOriginalURL(ctx, shortURL)
 	return record, found
 }
 
+// StoreReady сообщает о готовности хранилища для работы.
 func (u *URLShortener) StoreReady() bool {
 	return u.store.Ready()
 }
 
+// GetUserURLs возвращает список ссылок пользователя.
 func (u *URLShortener) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
 	return u.store.GetUserURLs(ctx, userID)
 }
@@ -81,6 +89,7 @@ func fanIn(doneCh chan struct{}, resultChs ...chan error) chan error {
 	return finalCh
 }
 
+// DeleteUserURLs удаляет (помечает удалёнными) ссылки пользователя батчами и конкурентно.
 func (u *URLShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
 	if len(ids) == 0 {
 		return nil

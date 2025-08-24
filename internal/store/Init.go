@@ -8,10 +8,12 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
+// ErrShortURLNotFound возвращается, когда короткий ключ для исходного URL не найден.
 var (
 	ErrShortURLNotFound = errors.New("short URL not found")
 )
 
+// Store описывает контракт хранилища для разных реализаций.
 type Store interface {
 	Save(ctx context.Context, originalURL string, shortURL string, userID string) error
 	GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool)
@@ -19,8 +21,10 @@ type Store interface {
 	GetShortURL(ctx context.Context, shortURL string) (string, error)
 	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
 	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
+	Close() error
 }
 
+// InitStore инициализирует подходящее хранилище в зависимости от конфигурации.
 func InitStore(cfg *config.Config) (Store, error) {
 	switch {
 	case cfg.ConnectionString != "":

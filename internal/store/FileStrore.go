@@ -11,6 +11,7 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
+// FileStore реализует файловое хранилище ссылок в формате JSONL.
 type FileStore struct {
 	mu       sync.RWMutex
 	db       map[string]models.URLRecord
@@ -19,6 +20,7 @@ type FileStore struct {
 	nextUUID int
 }
 
+// NewFileStore открывает/создаёт файл и загружает существующие записи.
 func NewFileStore(filePath string) (*FileStore, error) {
 	// Открываем файл для чтения и записи (создаем если не существует)
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
@@ -41,6 +43,7 @@ func NewFileStore(filePath string) (*FileStore, error) {
 	return store, nil
 }
 
+// Save сохраняет новую запись в памяти и файле.
 func (s *FileStore) Save(ctx context.Context, originalURL, shortURL, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -85,6 +88,7 @@ func (s *FileStore) Save(ctx context.Context, originalURL, shortURL, userID stri
 	return s.writer.Flush()
 }
 
+// GetOriginalURL возвращает исходный URL по короткому ключу.
 func (s *FileStore) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -96,6 +100,7 @@ func (s *FileStore) GetOriginalURL(ctx context.Context, shortURL string) (models
 	return models.UserURLsResponse{ShortURL: record.ShortURL, OriginalURL: record.OriginalURL, DeletedFlag: record.DeletedFlag}, true
 }
 
+// GetShortURL возвращает короткий ключ по исходному URL или ошибку, если не найден.
 func (s *FileStore) GetShortURL(ctx context.Context, originalURL string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -108,6 +113,7 @@ func (s *FileStore) GetShortURL(ctx context.Context, originalURL string) (string
 	return "", ErrShortURLNotFound
 }
 
+// Close закрывает файловые ресурсы хранилища.
 func (s *FileStore) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -118,6 +124,7 @@ func (s *FileStore) Close() error {
 	return s.file.Close()
 }
 
+// loadFromFile загружает записи из файла при старте.
 func (s *FileStore) loadFromFile() error {
 	scanner := bufio.NewScanner(s.file)
 	for scanner.Scan() {
@@ -138,10 +145,12 @@ func (s *FileStore) loadFromFile() error {
 	return nil
 }
 
+// Ready сообщает о готовности файлового хранилища.
 func (s *FileStore) Ready() bool {
 	return true
 }
 
+// SaveBatch сохраняет набор записей в файл.
 func (s *FileStore) SaveBatch(records []models.URLRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -152,6 +161,7 @@ func (s *FileStore) SaveBatch(records []models.URLRecord) error {
 	return err
 }
 
+// GetUserURLs возвращает ссылки пользователя.
 func (s *FileStore) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -168,6 +178,7 @@ func (s *FileStore) GetUserURLs(ctx context.Context, userID string) ([]models.Us
 	return urls, nil
 }
 
+// DeleteUserURLs помечает ссылки пользователя как удалённые и перезаписывает файл.
 func (s *FileStore) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -186,6 +197,7 @@ func (s *FileStore) DeleteUserURLs(ctx context.Context, userID string, ids []str
 	return nil
 }
 
+// saveAllToFile перезаписывает весь файл актуальным состоянием БД.
 func (s *FileStore) saveAllToFile() {
 	s.file.Truncate(0)
 	s.file.Seek(0, 0)

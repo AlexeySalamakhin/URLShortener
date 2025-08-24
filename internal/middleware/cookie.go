@@ -9,8 +9,11 @@ import (
 
 type contextKey string
 
+// UserIDKey — ключ контекста для хранения идентификатора пользователя.
 const UserIDKey contextKey = "user_id"
 
+// CookieMiddleware обеспечивает наличие валидной cookie с user_id и
+// прокидывает идентификатор пользователя в контекст запроса.
 func CookieMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var newCookie *http.Cookie
