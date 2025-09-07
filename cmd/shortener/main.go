@@ -12,24 +12,14 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
 )
 
-var buildVersion string
-var buildDate string
-var buildCommit string
+var (
+	buildVersion, buildDate, buildCommit string
+)
 
 func main() {
 	// Вывод информации о сборке
-	if buildVersion == "" {
-		buildVersion = "N/A"
-	}
-	if buildDate == "" {
-		buildDate = "N/A"
-	}
-	if buildCommit == "" {
-		buildCommit = "N/A"
-	}
-	fmt.Println("Build version:", buildVersion)
-	fmt.Println("Build date:", buildDate)
-	fmt.Println("Build commit:", buildCommit)
+	setBuildInfoDefaults()
+	printBuildInfo()
 
 	config := config.NewConfigs()
 	flag.Parse()
@@ -53,4 +43,22 @@ func main() {
 	if err := http.ListenAndServe(config.ServerAddr, r); err != nil {
 		panic(err)
 	}
+}
+
+func setBuildInfoDefaults() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+}
+
+func printBuildInfo() {
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
 }
