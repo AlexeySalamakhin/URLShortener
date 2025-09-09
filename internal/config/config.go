@@ -23,7 +23,6 @@ type Config struct {
 func NewConfigs() *Config {
 	var c Config
 	c.parseFlags()
-	flag.Parse()
 
 	if c.ConfigPath == "" {
 		c.ConfigPath = os.Getenv("CONFIG")
