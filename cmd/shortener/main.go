@@ -10,6 +10,8 @@ import (
 	logger "github.com/AlexeySalamakhin/URLShortener/internal/logger"
 	"github.com/AlexeySalamakhin/URLShortener/internal/service"
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
+	"go.uber.org/zap"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var (
@@ -40,8 +42,25 @@ func main() {
 	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL)
 	r := urlHandler.SetupRouter()
 
-	if err := http.ListenAndServe(config.ServerAddr, r); err != nil {
-		panic(err)
+	if config.EnableHTTPS {
+		manager := &autocert.Manager{
+			Cache:  autocert.DirCache(".autocert-cache"),
+			Prompt: autocert.AcceptTOS,
+		}
+		server := &http.Server{
+			Addr:      config.ServerAddr,
+			Handler:   r,
+			TLSConfig: manager.TLSConfig(),
+		}
+		logger.Log.Info("Запуск HTTPS-сервера с autocert...", zap.String("addr", config.ServerAddr))
+		if err := server.ListenAndServeTLS("", ""); err != nil {
+			panic(err)
+		}
+	} else {
+		logger.Log.Info("Запуск HTTP-сервера...", zap.String("addr", config.ServerAddr))
+		if err := http.ListenAndServe(config.ServerAddr, r); err != nil {
+			panic(err)
+		}
 	}
 }
 

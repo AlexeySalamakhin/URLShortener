@@ -13,6 +13,7 @@ type Config struct {
 	BaseURL          string `env:"BASE_URL"`
 	File             string `env:"FILE_STORAGE_PATH"`
 	ConnectionString string `env:"DATABASE_DSN"`
+	EnableHTTPS      bool   `env:"ENABLE_HTTPS"`
 }
 
 // NewConfigs создаёт структуру конфигурации, парсит флаги и переменные окружения.
@@ -29,5 +30,5 @@ func (c *Config) parseFlags() {
 	flag.StringVar(&c.BaseURL, "b", "http://localhost:8080", "Base URL")
 	flag.StringVar(&c.File, "f", "urls.txt", "File")
 	flag.StringVar(&c.ConnectionString, "d", "", "Connection string")
-
+	flag.BoolVar(&c.EnableHTTPS, "s", false, "Enable HTTPS mode")
 }
