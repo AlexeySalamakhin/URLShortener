@@ -50,7 +50,7 @@ func TestPostURLHandlerText(t *testing.T) {
 		},
 	}
 	shortener := service.NewURLShortener(store.NewInMemoryStore())
-	handler := handler.NewURLHandler(shortener, "localhost:8080")
+	handler := handler.NewURLHandler(shortener, "localhost:8080", "")
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			r := httptest.NewRequest(tc.method, "/", strings.NewReader(tc.body))
@@ -86,7 +86,7 @@ func TestGetURLHandler(t *testing.T) {
 	}
 
 	shortener := service.NewURLShortener(store.NewInMemoryStore())
-	handler := handler.NewURLHandler(shortener, "localhost:8080")
+	handler := handler.NewURLHandler(shortener, "localhost:8080", "")
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.URL))
@@ -137,6 +137,10 @@ func (m *MockShortener) NewURLShortener() *MockShortener {
 	return &MockShortener{}
 }
 
+func (m *MockShortener) GetStats(ctx context.Context) (int, int, error) {
+	return 0, 0, nil
+}
+
 func TestPostURLHandlerJson(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -169,7 +173,7 @@ func TestPostURLHandlerJson(t *testing.T) {
 			mockShortener := new(MockShortener)
 			mockShortener.On("Shorten", mock.Anything, tt.input.URL, tt.userID).Return(tt.mockShortKey, false)
 
-			handler := handler.NewURLHandler(mockShortener, "http://localhost:8080")
+			handler := handler.NewURLHandler(mockShortener, "http://localhost:8080", "")
 			body, _ := json.Marshal(tt.input)
 			req, _ := http.NewRequest("POST", "/shorten", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
@@ -249,7 +253,7 @@ func TestGetUserURLs(t *testing.T) {
 			mockShortener := new(MockShortener)
 			mockShortener.On("GetUserURLs", mock.Anything, tt.userID).Return(tt.mockURLs, tt.mockError)
 
-			handler := handler.NewURLHandler(mockShortener, "http://localhost:8080")
+			handler := handler.NewURLHandler(mockShortener, "http://localhost:8080", "")
 			req, _ := http.NewRequest("GET", "/api/user/urls", nil)
 
 			if tt.userID != "" {

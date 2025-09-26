@@ -18,6 +18,7 @@ type Store interface {
 	Ready() bool
 	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
 	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
+	GetStats(ctx context.Context) (urls int, users int, err error)
 }
 
 // URLShortener реализует бизнес-логику сокращения ссылок.
@@ -56,6 +57,11 @@ func (u *URLShortener) StoreReady() bool {
 // GetUserURLs возвращает список ссылок пользователя.
 func (u *URLShortener) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
 	return u.store.GetUserURLs(ctx, userID)
+}
+
+// GetStats возвращает количество не удалённых URL и уникальных пользователей.
+func (u *URLShortener) GetStats(ctx context.Context) (urls int, users int, err error) {
+	return u.store.GetStats(ctx)
 }
 
 func fanIn(doneCh chan struct{}, resultChs ...chan error) chan error {

@@ -23,6 +23,8 @@ type Config struct {
 	EnableHTTPS bool `env:"ENABLE_HTTPS" json:"enable_https"`
 	// ConfigPath — путь к файлу конфигурации
 	ConfigPath string `env:"CONFIG" json:"config_path"`
+	// TrustedSubnet — CIDR доверенной подсети для доступа к /api/internal/stats
+	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
 // NewConfigs создаёт структуру конфигурации, парсит флаги, переменные окружения и JSON-файл.
@@ -49,6 +51,7 @@ func (c *Config) parseFlags() {
 	flag.BoolVar(&c.EnableHTTPS, "s", false, "Enable HTTPS mode")
 	flag.StringVar(&c.ConfigPath, "c", "", "Путь к JSON-файлу конфигурации")
 	flag.StringVar(&c.ConfigPath, "config", "", "Путь к JSON-файлу конфигурации (long)")
+	flag.StringVar(&c.TrustedSubnet, "t", "", "Trusted subnet (CIDR)")
 }
 
 // loadFromJSON загружает конфиг из JSON-файла (с поддержкой комментариев).

@@ -44,7 +44,7 @@ func main() {
 	}()
 
 	urlShortener := service.NewURLShortener(store)
-	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL)
+	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL, config.TrustedSubnet)
 	r := urlHandler.SetupRouter()
 
 	server := &http.Server{

@@ -209,3 +209,18 @@ func (s *FileStore) saveAllToFile() {
 	}
 	s.writer.Flush()
 }
+
+// GetStats возвращает количество не удалённых URL и уникальных пользователей.
+func (s *FileStore) GetStats(ctx context.Context) (urls int, users int, err error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	userSet := make(map[string]struct{})
+	for _, record := range s.db {
+		if !record.DeletedFlag {
+			urls++
+			userSet[record.UserID] = struct{}{}
+		}
+	}
+	users = len(userSet)
+	return
+}
