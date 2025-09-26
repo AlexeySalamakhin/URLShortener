@@ -8,15 +8,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// GRPCServer реализует gRPC-фасад поверх бизнес-логики сервиса сокращения URL.
+// Делегирует все операции в `URLShortenerService` и преобразует структуры
+// запросов/ответов между gRPC и внутренними моделями.
 type GRPCServer struct {
 	urlpb.UnimplementedURLShortenerServer
 	logic *URLShortenerService
 }
 
+// NewGRPCServer создаёт новый экземпляр gRPC-сервера с внедрённой бизнес-логикой.
 func NewGRPCServer(logic *URLShortenerService) *GRPCServer {
 	return &GRPCServer{logic: logic}
 }
 
+// CreateShortURL создаёт короткий ключ для переданного исходного URL.
 func (s *GRPCServer) CreateShortURL(ctx context.Context, req *urlpb.CreateShortURLRequest) (*urlpb.CreateShortURLResponse, error) {
 	shortKey, conflict := s.logic.Shorten(ctx, req.OriginalUrl, req.UserId)
 	return &urlpb.CreateShortURLResponse{
@@ -25,6 +30,7 @@ func (s *GRPCServer) CreateShortURL(ctx context.Context, req *urlpb.CreateShortU
 	}, nil
 }
 
+// GetOriginalURL возвращает исходный URL и признак удаления по короткому ключу.
 func (s *GRPCServer) GetOriginalURL(ctx context.Context, req *urlpb.GetOriginalURLRequest) (*urlpb.GetOriginalURLResponse, error) {
 	record, found := s.logic.GetOriginalURL(ctx, req.ShortUrl)
 	return &urlpb.GetOriginalURLResponse{
@@ -34,6 +40,7 @@ func (s *GRPCServer) GetOriginalURL(ctx context.Context, req *urlpb.GetOriginalU
 	}, nil
 }
 
+// BatchShorten выполняет пакетное сокращение URL и возвращает соответствия.
 func (s *GRPCServer) BatchShorten(ctx context.Context, req *urlpb.BatchShortenRequest) (*urlpb.BatchShortenResponse, error) {
 	var resp urlpb.BatchShortenResponse
 	for _, item := range req.Items {
@@ -46,6 +53,7 @@ func (s *GRPCServer) BatchShorten(ctx context.Context, req *urlpb.BatchShortenRe
 	return &resp, nil
 }
 
+// GetUserURLs возвращает список ссылок пользователя.
 func (s *GRPCServer) GetUserURLs(ctx context.Context, req *urlpb.GetUserURLsRequest) (*urlpb.GetUserURLsResponse, error) {
 	urls, err := s.logic.GetUserURLs(ctx, req.UserId)
 	if err != nil {
@@ -62,6 +70,7 @@ func (s *GRPCServer) GetUserURLs(ctx context.Context, req *urlpb.GetUserURLsRequ
 	return &resp, nil
 }
 
+// DeleteUserURLs помечает набор ссылок пользователя как удалённые.
 func (s *GRPCServer) DeleteUserURLs(ctx context.Context, req *urlpb.DeleteUserURLsRequest) (*urlpb.DeleteUserURLsResponse, error) {
 	err := s.logic.DeleteUserURLs(ctx, req.UserId, req.Ids)
 	if err != nil {
@@ -70,6 +79,7 @@ func (s *GRPCServer) DeleteUserURLs(ctx context.Context, req *urlpb.DeleteUserUR
 	return &urlpb.DeleteUserURLsResponse{Success: true}, nil
 }
 
+// GetStats возвращает статистику по количеству URL и пользователей.
 func (s *GRPCServer) GetStats(ctx context.Context, req *urlpb.GetStatsRequest) (*urlpb.GetStatsResponse, error) {
 	urls, users, err := s.logic.GetStats(ctx)
 	if err != nil {
@@ -81,6 +91,7 @@ func (s *GRPCServer) GetStats(ctx context.Context, req *urlpb.GetStatsRequest) (
 	}, nil
 }
 
+// Ping проверяет готовность хранилища.
 func (s *GRPCServer) Ping(ctx context.Context, req *urlpb.PingRequest) (*urlpb.PingResponse, error) {
 	return &urlpb.PingResponse{Ready: s.logic.StoreReady()}, nil
 }
