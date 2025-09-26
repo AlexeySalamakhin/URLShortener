@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package urlshortener;
+
+option go_package = "URLShortener/internal/models;models";
+
+service URLShortener {
+  rpc CreateShortURL (CreateShortURLRequest) returns (CreateShortURLResponse);
+  rpc GetOriginalURL (GetOriginalURLRequest) returns (GetOriginalURLResponse);
+  rpc BatchShorten (BatchShortenRequest) returns (BatchShortenResponse);
+  rpc GetUserURLs (GetUserURLsRequest) returns (GetUserURLsResponse);
+  rpc DeleteUserURLs (DeleteUserURLsRequest) returns (DeleteUserURLsResponse);
+  rpc GetStats (GetStatsRequest) returns (GetStatsResponse);
+  rpc Ping (PingRequest) returns (PingResponse);
+}
+
+message CreateShortURLRequest {
+  string original_url = 1;
+  string user_id = 2;
+}
+
+message CreateShortURLResponse {
+  string short_url = 1;
+  bool conflict = 2;
+}
+
+message GetOriginalURLRequest {
+  string short_url = 1;
+}
+
+message GetOriginalURLResponse {
+  string original_url = 1;
+  bool is_deleted = 2;
+  bool found = 3;
+}
+
+message BatchShortenRequest {
+  repeated BatchShortenItem items = 1;
+  string user_id = 2;
+}
+
+message BatchShortenItem {
+  string correlation_id = 1;
+  string original_url = 2;
+}
+
+message BatchShortenResponse {
+  repeated BatchShortenResponseItem items = 1;
+}
+
+message BatchShortenResponseItem {
+  string correlation_id = 1;
+  string short_url = 2;
+}
+
+message GetUserURLsRequest {
+  string user_id = 1;
+}
+
+message UserURL {
+  string short_url = 1;
+  string original_url = 2;
+  bool is_deleted = 3;
+}
+
+message GetUserURLsResponse {
+  repeated UserURL urls = 1;
+}
+
+message DeleteUserURLsRequest {
+  string user_id = 1;
+  repeated string ids = 2;
+}
+
+message DeleteUserURLsResponse {
+  bool success = 1;
+}
+
+message GetStatsRequest {}
+message GetStatsResponse {
+  int32 urls = 1;
+  int32 users = 2;
+}
+
+message PingRequest {}
+message PingResponse {
+  bool ready = 1;
+}
+
+
+

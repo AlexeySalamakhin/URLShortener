@@ -11,7 +11,7 @@ import (
 // Config содержит конфигурационные параметры приложения, доступные через
 // флаги командной строки, переменные окружения и JSON-файл.
 type Config struct {
-	// ServerAddr — адрес, на котором запускается сервер (например, ":8080")
+	// ServerAddr — адрес, на котором запускается HTTP-сервер (например, ":8080")
 	ServerAddr string `env:"SERVER_ADDRESS" json:"server_address"`
 	// BaseURL — базовый URL сервиса сокращения ссылок
 	BaseURL string `env:"BASE_URL" json:"base_url"`
@@ -23,6 +23,12 @@ type Config struct {
 	EnableHTTPS bool `env:"ENABLE_HTTPS" json:"enable_https"`
 	// ConfigPath — путь к файлу конфигурации
 	ConfigPath string `env:"CONFIG" json:"config_path"`
+	// TrustedSubnet — CIDR доверенной подсети для доступа к /api/internal/stats
+	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
+	// GRPCAddr — адрес, на котором запускается gRPC-сервер (например, ":9090")
+	GRPCAddr string `env:"GRPC_ADDRESS" json:"grpc_address"`
+	// EnableGRPCTLS — флаг включения TLS для gRPC
+	EnableGRPCTLS bool `env:"ENABLE_GRPC_TLS" json:"enable_grpc_tls"`
 }
 
 // NewConfigs создаёт структуру конфигурации, парсит флаги, переменные окружения и JSON-файл.
@@ -49,6 +55,9 @@ func (c *Config) parseFlags() {
 	flag.BoolVar(&c.EnableHTTPS, "s", false, "Enable HTTPS mode")
 	flag.StringVar(&c.ConfigPath, "c", "", "Путь к JSON-файлу конфигурации")
 	flag.StringVar(&c.ConfigPath, "config", "", "Путь к JSON-файлу конфигурации (long)")
+	flag.StringVar(&c.TrustedSubnet, "t", "", "Trusted subnet (CIDR)")
+	flag.StringVar(&c.GRPCAddr, "grpc", ":9090", "gRPC server address")
+	flag.BoolVar(&c.EnableGRPCTLS, "grpc-tls", false, "Enable gRPC TLS mode")
 }
 
 // loadFromJSON загружает конфиг из JSON-файла (с поддержкой комментариев).

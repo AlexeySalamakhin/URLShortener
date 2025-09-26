@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 
@@ -16,24 +17,26 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
-// URLShortener описывает интерфейс сервиса сокращения URL.
-type URLShortener interface {
+// URLShortenerService описывает интерфейс сервиса сокращения URL.
+type URLShortenerService interface {
 	Shorten(ctx context.Context, originalURL string, userID string) (string, bool)
 	GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool)
 	StoreReady() bool
 	GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error)
 	DeleteUserURLs(ctx context.Context, userID string, ids []string) error
+	GetStats(ctx context.Context) (urls int, users int, err error)
 }
 
 // URLHandler обрабатывает HTTP-запросы для сервиса сокращения URL.
 type URLHandler struct {
-	Shortener URLShortener
-	BaseURL   string
+	Shortener     URLShortenerService
+	BaseURL       string
+	TrustedSubnet string
 }
 
-// NewURLHandler создаёт новый экземпляр обработчика с заданным сервисом и базовым URL.
-func NewURLHandler(shortener URLShortener, baseURL string) *URLHandler {
-	return &URLHandler{Shortener: shortener, BaseURL: baseURL}
+// NewURLHandler создаёт новый экземпляр обработчика с заданным сервисом, базовым URL и trusted_subnet.
+func NewURLHandler(shortener URLShortenerService, baseURL string, trustedSubnet string) *URLHandler {
+	return &URLHandler{Shortener: shortener, BaseURL: baseURL, TrustedSubnet: trustedSubnet}
 }
 
 // SetupRouter настраивает маршруты HTTP и возвращает роутер chi.Mux.
@@ -54,6 +57,7 @@ func (h *URLHandler) SetupRouter() *chi.Mux {
 	})
 
 	rout.Get("/ping", h.Ping)
+	rout.Get("/api/internal/stats", h.GetStatsHandler)
 	rout.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	})
@@ -236,4 +240,32 @@ func (h *URLHandler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// GetStatsHandler возвращает статистику по количеству URL и пользователей.
+func (h *URLHandler) GetStatsHandler(w http.ResponseWriter, r *http.Request) {
+	if h.TrustedSubnet == "" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	ipStr := r.Header.Get("X-Real-IP")
+	if ipStr == "" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	ip := net.ParseIP(ipStr)
+	_, subnet, err := net.ParseCIDR(h.TrustedSubnet)
+	if err != nil || ip == nil || !subnet.Contains(ip) {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	ctx := r.Context()
+	urls, users, err := h.Shortener.GetStats(ctx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	resp := map[string]int{"urls": urls, "users": users}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
