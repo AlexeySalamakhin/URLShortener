@@ -49,7 +49,7 @@ func TestPostURLHandlerText(t *testing.T) {
 			userID:       "test-user",
 		},
 	}
-	shortener := service.NewURLShortener(store.NewInMemoryStore())
+	shortener := service.NewURLShortenerService(store.NewInMemoryStore())
 	handler := handler.NewURLHandler(shortener, "localhost:8080", "")
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestGetURLHandler(t *testing.T) {
 		},
 	}
 
-	shortener := service.NewURLShortener(store.NewInMemoryStore())
+	shortener := service.NewURLShortenerService(store.NewInMemoryStore())
 	handler := handler.NewURLHandler(shortener, "localhost:8080", "")
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {

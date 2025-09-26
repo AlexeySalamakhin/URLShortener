@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,10 +14,13 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/config"
 	"github.com/AlexeySalamakhin/URLShortener/internal/handler"
 	logger "github.com/AlexeySalamakhin/URLShortener/internal/logger"
+	"github.com/AlexeySalamakhin/URLShortener/internal/middleware"
+	urlpb "github.com/AlexeySalamakhin/URLShortener/internal/models"
 	"github.com/AlexeySalamakhin/URLShortener/internal/service"
 	"github.com/AlexeySalamakhin/URLShortener/internal/store"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -43,14 +47,34 @@ func main() {
 		}
 	}()
 
-	urlShortener := service.NewURLShortener(store)
-	urlHandler := handler.NewURLHandler(urlShortener, config.BaseURL, config.TrustedSubnet)
+	urlShortenerService := service.NewURLShortenerService(store)
+	urlHandler := handler.NewURLHandler(urlShortenerService, config.BaseURL, config.TrustedSubnet)
 	r := urlHandler.SetupRouter()
 
 	server := &http.Server{
 		Addr:    config.ServerAddr,
 		Handler: r,
 	}
+
+	// --- gRPC сервер ---
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(middleware.GRPCUnaryLogger),
+		grpc.StreamInterceptor(middleware.GRPCStreamLogger),
+	)
+	grpcSrv := service.NewGRPCServer(urlShortenerService)
+	urlpb.RegisterURLShortenerServer(grpcServer, grpcSrv)
+
+	grpcLis, err := net.Listen("tcp", config.GRPCAddr)
+	if err != nil {
+		logger.Log.Error("Не удалось запустить gRPC listener", zap.Error(err))
+		os.Exit(1)
+	}
+
+	grpcErrCh := make(chan error, 1)
+	go func() {
+		logger.Log.Info("Запуск gRPC-сервера...", zap.String("addr", config.GRPCAddr))
+		grpcErrCh <- grpcServer.Serve(grpcLis)
+	}()
 
 	// Канал для сигналов завершения
 	sigCh := make(chan os.Signal, 1)
@@ -82,6 +106,11 @@ func main() {
 			logger.Log.Error("Ошибка сервера", zap.Error(err))
 			os.Exit(1)
 		}
+	case err := <-grpcErrCh:
+		if err != nil {
+			logger.Log.Error("Ошибка gRPC сервера", zap.Error(err))
+			os.Exit(1)
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -91,6 +120,7 @@ func main() {
 	} else {
 		logger.Log.Info("Сервер завершён корректно")
 	}
+	grpcServer.GracefulStop()
 }
 
 func setBuildInfoDefaults() {

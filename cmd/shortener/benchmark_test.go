@@ -15,7 +15,7 @@ import (
 var benchConfig = config.NewConfigs()
 
 func BenchmarkShortenLogic_InMemoryStore(b *testing.B) {
-	s := service.NewURLShortener(store.NewInMemoryStore())
+	s := service.NewURLShortenerService(store.NewInMemoryStore())
 	ctx := context.Background()
 	for i := 0; i < b.N; i++ {
 		s.Shorten(ctx, fmt.Sprintf("https://bench/%d", i), "user1")
@@ -26,7 +26,7 @@ func BenchmarkShortenLogic_FileStore(b *testing.B) {
 	file, _ := os.CreateTemp("", "filestore_bench_*.tmp")
 	defer os.Remove(file.Name())
 	fs, _ := store.NewFileStore(file.Name())
-	s := service.NewURLShortener(fs)
+	s := service.NewURLShortenerService(fs)
 	ctx := context.Background()
 	for i := 0; i < b.N; i++ {
 		s.Shorten(ctx, fmt.Sprintf("https://bench/%d", i), "user1")
@@ -42,7 +42,7 @@ func BenchmarkShortenLogic_PostgresStore(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Ошибка подключения к БД: %v", err)
 	}
-	s := service.NewURLShortener(dbStore)
+	s := service.NewURLShortenerService(dbStore)
 	ctx := context.Background()
 	for i := 0; i < b.N; i++ {
 		s.Shorten(ctx, "https://bench/"+randomString(12), "user1")
@@ -50,7 +50,7 @@ func BenchmarkShortenLogic_PostgresStore(b *testing.B) {
 }
 
 func BenchmarkGetUserURLsLogic_InMemoryStore(b *testing.B) {
-	s := service.NewURLShortener(store.NewInMemoryStore())
+	s := service.NewURLShortenerService(store.NewInMemoryStore())
 	ctx := context.Background()
 	userID := "user1"
 	for i := 0; i < 1000; i++ {

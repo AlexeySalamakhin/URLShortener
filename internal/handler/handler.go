@@ -17,8 +17,8 @@ import (
 	"github.com/AlexeySalamakhin/URLShortener/internal/models"
 )
 
-// URLShortener описывает интерфейс сервиса сокращения URL.
-type URLShortener interface {
+// URLShortenerService описывает интерфейс сервиса сокращения URL.
+type URLShortenerService interface {
 	Shorten(ctx context.Context, originalURL string, userID string) (string, bool)
 	GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool)
 	StoreReady() bool
@@ -29,13 +29,13 @@ type URLShortener interface {
 
 // URLHandler обрабатывает HTTP-запросы для сервиса сокращения URL.
 type URLHandler struct {
-	Shortener     URLShortener
+	Shortener     URLShortenerService
 	BaseURL       string
 	TrustedSubnet string
 }
 
 // NewURLHandler создаёт новый экземпляр обработчика с заданным сервисом, базовым URL и trusted_subnet.
-func NewURLHandler(shortener URLShortener, baseURL string, trustedSubnet string) *URLHandler {
+func NewURLHandler(shortener URLShortenerService, baseURL string, trustedSubnet string) *URLHandler {
 	return &URLHandler{Shortener: shortener, BaseURL: baseURL, TrustedSubnet: trustedSubnet}
 }
 

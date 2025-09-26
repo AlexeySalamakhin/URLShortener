@@ -21,19 +21,19 @@ type Store interface {
 	GetStats(ctx context.Context) (urls int, users int, err error)
 }
 
-// URLShortener реализует бизнес-логику сокращения ссылок.
-type URLShortener struct {
+// URLShortenerService реализует бизнес-логику сокращения ссылок.
+type URLShortenerService struct {
 	store Store
 }
 
-// NewURLShortener создаёт новый экземпляр сервиса с переданным хранилищем.
-func NewURLShortener(store Store) *URLShortener {
-	return &URLShortener{store: store}
+// NewURLShortenerService создаёт новый экземпляр сервиса с переданным хранилищем.
+func NewURLShortenerService(store Store) *URLShortenerService {
+	return &URLShortenerService{store: store}
 }
 
 // Shorten сокращает исходный URL и возвращает короткий ключ.
 // Второй параметр возвращаемого значения равен true, если ссылка уже существовала.
-func (u *URLShortener) Shorten(ctx context.Context, originalURL string, userID string) (string, bool) {
+func (u *URLShortenerService) Shorten(ctx context.Context, originalURL string, userID string) (string, bool) {
 	foundURL, err := u.store.GetShortURL(ctx, originalURL)
 	if err != nil && errors.Is(err, store.ErrShortURLNotFound) {
 		shortKey := utils.GenerateShortURL()
@@ -44,23 +44,23 @@ func (u *URLShortener) Shorten(ctx context.Context, originalURL string, userID s
 }
 
 // GetOriginalURL возвращает исходный URL по короткому ключу.
-func (u *URLShortener) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
+func (u *URLShortenerService) GetOriginalURL(ctx context.Context, shortURL string) (models.UserURLsResponse, bool) {
 	record, found := u.store.GetOriginalURL(ctx, shortURL)
 	return record, found
 }
 
 // StoreReady сообщает о готовности хранилища для работы.
-func (u *URLShortener) StoreReady() bool {
+func (u *URLShortenerService) StoreReady() bool {
 	return u.store.Ready()
 }
 
 // GetUserURLs возвращает список ссылок пользователя.
-func (u *URLShortener) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
+func (u *URLShortenerService) GetUserURLs(ctx context.Context, userID string) ([]models.UserURLsResponse, error) {
 	return u.store.GetUserURLs(ctx, userID)
 }
 
 // GetStats возвращает количество не удалённых URL и уникальных пользователей.
-func (u *URLShortener) GetStats(ctx context.Context) (urls int, users int, err error) {
+func (u *URLShortenerService) GetStats(ctx context.Context) (urls int, users int, err error) {
 	return u.store.GetStats(ctx)
 }
 
@@ -96,7 +96,7 @@ func fanIn(doneCh chan struct{}, resultChs ...chan error) chan error {
 }
 
 // DeleteUserURLs удаляет (помечает удалёнными) ссылки пользователя батчами и конкурентно.
-func (u *URLShortener) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
+func (u *URLShortenerService) DeleteUserURLs(ctx context.Context, userID string, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}
