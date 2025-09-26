@@ -11,12 +11,18 @@ import (
 // Config содержит конфигурационные параметры приложения, доступные через
 // флаги командной строки, переменные окружения и JSON-файл.
 type Config struct {
-	ServerAddr       string `env:"SERVER_ADDRESS" json:"server_address"`
-	BaseURL          string `env:"BASE_URL" json:"base_url"`
-	File             string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
+	// ServerAddr — адрес, на котором запускается сервер (например, ":8080")
+	ServerAddr string `env:"SERVER_ADDRESS" json:"server_address"`
+	// BaseURL — базовый URL сервиса сокращения ссылок
+	BaseURL string `env:"BASE_URL" json:"base_url"`
+	// File — путь к файлу для хранения данных (если используется файловое хранилище)
+	File string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
+	// ConnectionString — строка подключения к базе данных (DSN)
 	ConnectionString string `env:"DATABASE_DSN" json:"database_dsn"`
-	EnableHTTPS      bool   `env:"ENABLE_HTTPS" json:"enable_https"`
-	ConfigPath       string `env:"CONFIG" json:"config_path"`
+	// EnableHTTPS — флаг включения HTTPS
+	EnableHTTPS bool `env:"ENABLE_HTTPS" json:"enable_https"`
+	// ConfigPath — путь к файлу конфигурации
+	ConfigPath string `env:"CONFIG" json:"config_path"`
 }
 
 // NewConfigs создаёт структуру конфигурации, парсит флаги, переменные окружения и JSON-файл.
@@ -30,7 +36,7 @@ func NewConfigs() *Config {
 	if c.ConfigPath != "" {
 		_ = c.loadFromJSON(c.ConfigPath)
 	}
-	_ = env.Parse(&c)
+	env.Parse(&c)
 	return &c
 }
 
