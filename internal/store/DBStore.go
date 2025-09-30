@@ -176,6 +176,19 @@ func (s *PostgresStore) DeleteUserURLs(ctx context.Context, userID string, ids [
 	return err
 }
 
+// GetStats возвращает количество не удалённых URL и уникальных пользователей.
+func (s *PostgresStore) GetStats(ctx context.Context) (urls int, users int, err error) {
+	row := s.pool.QueryRow(ctx, "SELECT COUNT(*) FROM urls WHERE is_deleted = FALSE")
+	if err = row.Scan(&urls); err != nil {
+		return
+	}
+	row = s.pool.QueryRow(ctx, "SELECT COUNT(DISTINCT user_id) FROM urls WHERE is_deleted = FALSE")
+	if err = row.Scan(&users); err != nil {
+		return
+	}
+	return
+}
+
 // Close закрывает пул соединений.
 func (s *PostgresStore) Close() error {
 	s.pool.Close()

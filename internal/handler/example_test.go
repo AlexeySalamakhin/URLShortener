@@ -49,8 +49,12 @@ func (f *fakeShortener) DeleteUserURLs(ctx context.Context, userID string, ids [
 	return nil
 }
 
+func (f *fakeShortener) GetStats(ctx context.Context) (int, int, error) {
+	return 0, 0, nil
+}
+
 func newTestHandler(baseURL string, s *fakeShortener) *handler.URLHandler {
-	return handler.NewURLHandler(s, baseURL)
+	return handler.NewURLHandler(s, baseURL, "")
 }
 
 func ExampleURLHandler_PostURLHandlerJSON() {

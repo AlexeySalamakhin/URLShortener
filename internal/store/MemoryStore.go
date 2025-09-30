@@ -98,3 +98,16 @@ func (s *InMemoryStore) DeleteUserURLs(ctx context.Context, userID string, ids [
 func (s *InMemoryStore) Close() error {
 	return nil
 }
+
+// GetStats возвращает количество не удалённых URL и уникальных пользователей.
+func (s *InMemoryStore) GetStats(ctx context.Context) (urls int, users int, err error) {
+	userSet := make(map[string]struct{})
+	for _, record := range s.db {
+		if !record.DeletedFlag {
+			urls++
+			userSet[record.UserID] = struct{}{}
+		}
+	}
+	users = len(userSet)
+	return
+}
